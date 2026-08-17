@@ -1,0 +1,40 @@
+# Render.com blueprint for the VARUN TEJ backend.
+#
+# The backend lives in backend/ (the repo root holds the Flutter app too), so
+# the service must set rootDir to backend — otherwise Render runs npm in the
+# repo root and fails with "Could not read package.json".
+#
+# Secrets (sync: false) are never stored in this file; set them in the Render
+# dashboard after the first deploy.
+services:
+  - type: web
+    name: tej-mamillapalli-backend
+    runtime: node
+    rootDir: backend
+    repo: https://github.com/mvarun96765-web/tej_mamillapalli.git
+    plan: free
+    healthCheckPath: /health
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: MONGO_DB_NAME
+        value: varuntej
+      # ── Secrets — set these in the Render dashboard ──────────
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: ANGELONE_API_KEY
+        sync: false
+      - key: ANGELONE_CLIENT_CODE
+        sync: false
+      - key: ANGELONE_TOTP_SECRET
+        sync: false
+      - key: ANGELONE_PIN
+        sync: false
+      - key: MARKETAUX_API_KEY
+        sync: false
