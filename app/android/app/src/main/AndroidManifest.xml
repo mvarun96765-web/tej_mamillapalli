@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for release builds: debug/profile manifests add this
+         automatically, but release APKs ship without it unless declared here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="VARUN TEJ"
         android:name="${applicationName}"
