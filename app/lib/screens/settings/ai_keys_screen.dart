@@ -17,10 +17,21 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
   Map<int, List<AiKey>> keysByWork = {};
   Map<String, dynamic>? meta;
   final Map<String, String> draftKeys = {}; // "$work:$slot" -> entered key
+  final Map<String, String> draftProviders = {};
+  final Map<String, String> draftModels = {};
   final Map<String, bool> enabledMap = {};
+  final Map<String, TextEditingController> _modelControllers = {};
   bool loading = true;
   bool saving = false;
   int? testingKey;
+
+  @override
+  void dispose() {
+    for (final c in _modelControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   static const _workTitles = {1: 'AI WORK 1', 2: 'AI WORK 2', 3: 'AI WORK 3'};
   static const _workSubtitles = {
@@ -57,28 +68,62 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
   AiKey? _existing(int work, int slot) =>
       (keysByWork[work] ?? []).where((k) => k.slot == slot).firstOrNull;
 
+  Map<String, dynamic>? _providerCfg(String provider) =>
+      (meta?['providers'] as Map<String, dynamic>?)?[provider] as Map<String, dynamic>?;
+
+  List<String> _modelsFor(String provider) =>
+      (_providerCfg(provider)?['models'] as List? ?? []).cast<String>();
+
   Future<void> _save() async {
     setState(() => saving = true);
     try {
+      final newKeys = <String>[];
       for (var work = 1; work <= 3; work++) {
         final slots = <Map<String, dynamic>>[];
         for (var i = 1; i <= 10; i++) {
+          final ref = '$work:$i';
           final existing = _existing(work, i);
+          final provider = draftProviders[ref] ?? existing?.provider ?? 'google';
+          final model = draftModels[ref] ?? existing?.model ?? '';
+          final key = draftKeys[ref] ?? '';
           slots.add({
             'slot': i,
-            'provider': existing?.provider ?? 'google',
-            'model': existing?.model ?? '',
-            'key': draftKeys['$work:$i'] ?? '',
-            'enabled': enabledMap['$work:$i'] ?? existing?.enabled ?? true,
+            'provider': provider,
+            'model': model,
+            'key': key,
+            'enabled': enabledMap[ref] ?? existing?.enabled ?? true,
           });
+          if (key.isNotEmpty) newKeys.add(ref);
         }
         await AiApi.saveKeys(work, slots);
       }
       draftKeys.clear();
-      if (mounted) {
+      draftProviders.clear();
+      draftModels.clear();
+      await _load();
+
+      if (newKeys.isNotEmpty) {
+        // Auto-verify every newly entered key and report the result.
+        final results = <String>[];
+        for (final ref in newKeys) {
+          final parts = ref.split(':');
+          final k = _existing(int.parse(parts[0]), int.parse(parts[1]));
+          if (k == null) continue;
+          final r = await AiApi.testKey(k.id);
+          final ok = r['ok'] == true;
+          results.add('${ok ? '✓' : '✗'} Key ${k.slot}: ${r['message'] ?? (ok ? 'Connected' : 'Failed')}');
+        }
+        if (!mounted) return;
+        final allOk = results.isNotEmpty && results.every((r) => r.startsWith('✓'));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(allOk ? 'AI Keys Successfully Connected ✓' : results.join('\n')),
+          backgroundColor: allOk ? AppColors.gain : AppColors.loss,
+          duration: const Duration(seconds: 5),
+        ));
+        await _load();
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('AI API keys saved')));
       }
-      await _load();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
@@ -88,15 +133,20 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
 
   Future<void> _test(AiKey key) async {
     setState(() => testingKey = key.id);
-    final r = await AiApi.testKey(key.id);
-    if (!mounted) return;
-    final ok = r['ok'] == true;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Key ${key.slot}: ${r['message'] ?? (ok ? 'Working' : 'Failed')}'),
-      backgroundColor: ok ? AppColors.gain : AppColors.loss,
-    ));
-    setState(() => testingKey = null);
-    await _load();
+    try {
+      final r = await AiApi.testKey(key.id);
+      if (!mounted) return;
+      final ok = r['ok'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? 'Key ${key.slot}: AI Key Successfully Connected' : 'Key ${key.slot}: ${r['message'] ?? 'Verification failed'}'),
+        backgroundColor: ok ? AppColors.gain : AppColors.loss,
+      ));
+    } finally {
+      if (mounted) {
+        setState(() => testingKey = null);
+        await _load();
+      }
+    }
   }
 
   @override
@@ -118,7 +168,7 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
                 const Padding(
                   padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
                   child: Text(
-                    '3 AI works × 10 keys = 30 configurable keys. Keys are encrypted and never shown in full. On quota/rate errors the backend automatically rotates to the next healthy key.',
+                    'Works with any AI provider: Google Gemini, OpenAI, Anthropic, Mistral, Groq, DeepSeek, xAI, Cohere, Together, Perplexity, OpenRouter, local Ollama/LM Studio and custom OpenAI-compatible endpoints. Enter a key and save — it is verified automatically. On quota/rate errors the backend rotates to the next healthy key.',
                     style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.4),
                   ),
                 ),
@@ -136,13 +186,15 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
   }
 
   List<Widget> _buildWork(int work) {
-    final providers = (meta?['providers'] as Map<String, dynamic>?) ?? {};
-
     return List.generate(10, (i) {
       final slot = i + 1;
+      final ref = '$work:$slot';
       final existing = _existing(work, slot);
-      final provider = existing?.provider ?? 'google';
-      final models = ((providers[provider] as Map<String, dynamic>?)?['models'] as List? ?? []).cast<String>();
+      final provider = draftProviders[ref] ?? existing?.provider ?? 'google';
+      final cfg = _providerCfg(provider);
+      final models = _modelsFor(provider);
+      final draftModel = draftModels[ref];
+      final model = draftModel ?? existing?.model ?? (models.isNotEmpty ? models.first : '');
 
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -176,33 +228,50 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: provider,
                     decoration: const InputDecoration(labelText: 'AI Provider', isDense: true),
-                    items: providers.keys
+                    items: ((meta?['providers'] as Map<String, dynamic>?)?.keys ?? <String>[])
                         .map((p) => DropdownMenuItem(
                               value: p,
-                              child: Text((providers[p] as Map<String, dynamic>?)?['label'] as String? ?? p),
+                              child: Text(_providerCfg(p)?['label'] as String? ?? p),
                             ))
                         .toList(),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        draftProviders[ref] = v;
+                        draftModels.remove(ref);
+                      });
+                    },
                   ),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    initialValue: existing?.model ?? (models.isNotEmpty ? models.first : ''),
-                    decoration: const InputDecoration(labelText: 'Model', isDense: true),
-                    items: models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                    onChanged: (_) => setState(() {}),
-                  ),
+                  if (models.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      initialValue: model,
+                      decoration: const InputDecoration(labelText: 'Model', isDense: true),
+                      items: models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+                      onChanged: (v) => setState(() => draftModels[ref] = v ?? ''),
+                    )
+                  else
+                    TextField(
+                      controller: _modelControllers.putIfAbsent(ref, () => TextEditingController(text: model)),
+                      decoration: const InputDecoration(
+                        labelText: 'Model',
+                        hintText: 'Enter model name (e.g. my-local-model)',
+                        isDense: true,
+                      ),
+                      onChanged: (v) => draftModels[ref] = v.trim(),
+                    ),
                   const SizedBox(height: 10),
                   TextField(
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: 'API Key',
+                      labelText: (cfg?['noKey'] == true) ? 'API Key (optional for local models)' : 'API Key',
                       hintText: existing?.keyHint.isNotEmpty == true
                           ? '${existing!.keyHint} (stored — enter only to replace)'
                           : 'Enter API key',
                       isDense: true,
                       suffixIcon: const Icon(Icons.visibility_off, size: 18),
                     ),
-                    onChanged: (v) => draftKeys['$work:$slot'] = v.trim(),
+                    onChanged: (v) => draftKeys[ref] = v.trim(),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -218,8 +287,8 @@ class _AiKeysScreenState extends State<AiKeysScreen> {
                         child: SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Enabled', style: TextStyle(fontSize: 12)),
-                          value: enabledMap['$work:$slot'] ?? existing?.enabled ?? true,
-                          onChanged: (v) => setState(() => enabledMap['$work:$slot'] = v),
+                          value: enabledMap[ref] ?? existing?.enabled ?? true,
+                          onChanged: (v) => setState(() => enabledMap[ref] = v),
                         ),
                       ),
                     ],

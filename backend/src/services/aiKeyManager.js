@@ -40,7 +40,7 @@ async function saveKeys(userId, work, slots) {
   for (const s of slots) {
     const slot = parseInt(s.slot, 10);
     if (slot < 1 || slot > MAX_KEYS_PER_WORK) continue;
-    const provider = s.provider || 'google';
+    const provider = s.provider && PROVIDERS[s.provider] ? s.provider : 'google';
     const model = s.model || '';
     const enabled = s.enabled === false ? 0 : 1;
     const key = String(s.key || '').trim();
@@ -89,7 +89,7 @@ async function resolveKey(userId, work) {
     return { configured: true, error: `All keys for AI Work ${work} (${WORKS[work]}) are currently ${status.toLowerCase()}.`, work };
   }
 
-  const decrypted = decrypt(key.encrypted_key);
+  const decrypted = key.encrypted_key ? decrypt(key.encrypted_key) : '';
   return { configured: true, key: { id: key.id, apiKey: decrypted, provider: key.provider, model: key.model }, work };
 }
 
@@ -98,8 +98,20 @@ async function testKey(userId, keyId) {
   const row = await db.prepare('SELECT * FROM ai_keys WHERE id = ? AND user_id = ?').get(keyId, userId);
   if (!row) return { error: 'Key not found' };
 
-  const apiKey = decrypt(row.encrypted_key);
-  const model = row.model || PROVIDERS[row.provider]?.models?.[0] || 'gemini-2.5-flash';
+  const cfg = PROVIDERS[row.provider];
+  if (!cfg) return { ok: false, category: 'SERVER', message: 'Unsupported provider' };
+  if (cfg.customEndpoint) {
+    return { ok: false, category: 'NETWORK', message: 'Custom endpoints are configured in Settings → AI Models.' };
+  }
+
+  const apiKey = row.encrypted_key ? decrypt(row.encrypted_key) : '';
+  if (!cfg.noKey && !apiKey) {
+    await setKeyStatus(userId, row.work, row.id, 'INVALID', 'API key is required');
+    return { ok: false, category: 'INVALID_KEY', message: 'API key is required' };
+  }
+  const model = row.model || cfg.models?.[0] || '';
+  if (!model) return { ok: false, category: 'MODEL_UNAVAILABLE', message: 'A model is required' };
+
   try {
     const out = await chat({
       provider: row.provider, apiKey, model,
@@ -107,7 +119,7 @@ async function testKey(userId, keyId) {
       user: 'Reply with exactly: OK',
     });
     await setKeyStatus(userId, row.work, row.id, 'ACTIVE');
-    return { ok: true, message: 'API Key Working', latencyMs: out.latencyMs, provider: row.provider, model };
+    return { ok: true, message: 'AI Key Successfully Connected', latencyMs: out.latencyMs, provider: row.provider, model };
   } catch (e) {
     const category = safeCategory(e);
     const status = category === 'INVALID_KEY' ? 'INVALID'
@@ -118,7 +130,7 @@ async function testKey(userId, keyId) {
     const friendly = {
       INVALID_KEY: 'Invalid API Key', RATE_LIMITED: 'Rate Limited',
       QUOTA_EXCEEDED: 'Quota Exceeded', TIMEOUT: 'Request timed out',
-      NETWORK: 'Network error', MODEL_UNAVAILABLE: 'Model unavailable', SERVER: 'Provider server error',
+      NETWORK: 'Network error — check endpoint / internet', MODEL_UNAVAILABLE: 'Model unavailable', SERVER: 'Provider server error',
     }[category] || 'Verification failed';
     return { ok: false, message: friendly, category, detail: e.message };
   }
@@ -163,13 +175,16 @@ async function verifyModel(userId, { provider, model, apiKey, endpoint }) {
   const p = String(provider || '').trim();
   const m = String(model || '').trim();
   const k = String(apiKey || '').trim();
-  if (!PROVIDERS[p]) return { ok: false, category: 'SERVER', message: 'Unsupported provider' };
+  const ep = String(endpoint || '').trim();
+  const cfg = PROVIDERS[p];
+  if (!cfg) return { ok: false, category: 'SERVER', message: 'Unsupported provider' };
   if (!m) return { ok: false, category: 'MODEL_UNAVAILABLE', message: 'Model is required' };
-  if (!k) return { ok: false, category: 'INVALID_KEY', message: 'API key is required' };
+  if (cfg.customEndpoint && !ep) return { ok: false, category: 'NETWORK', message: 'A base endpoint (URL) is required for this provider' };
+  if (!cfg.noKey && !k) return { ok: false, category: 'INVALID_KEY', message: 'API key is required' };
 
   const started = Date.now();
   try {
-    await chat({ provider: p, apiKey: k, model: m, system: 'Connectivity test.', user: 'Reply with exactly: OK' });
+    await chat({ provider: p, apiKey: k, model: m, endpoint: ep || undefined, system: 'Connectivity test.', user: 'Reply with exactly: OK' });
     return { ok: true, latencyMs: Date.now() - started };
   } catch (e) {
     return { ok: false, category: safeCategory(e), message: e.message };
@@ -177,12 +192,16 @@ async function verifyModel(userId, { provider, model, apiKey, endpoint }) {
 }
 
 async function saveModel(userId, data) {
-  const enc = data.apiKey ? encrypt(data.apiKey) : '';
-  if (!enc) return { error: 'API key is required' };
+  const cfg = PROVIDERS[data.provider];
+  if (!cfg) return { error: 'Unsupported provider' };
+  const key = String(data.apiKey || '').trim();
+  if (!cfg.noKey && !key) return { error: 'API key is required' };
+  if (cfg.customEndpoint && !String(data.endpoint || '').trim()) return { error: 'A base endpoint (URL) is required for this provider' };
+  const enc = key ? encrypt(key) : '';
   const info = await db.prepare(
     `INSERT INTO ai_models (user_id, provider, model, endpoint, encrypted_key, key_hint, status, verified_at, is_primary, latency_ms)
      VALUES (?, ?, ?, ?, ?, ?, 'CONNECTED', datetime('now'), 0, ?)`
-  ).run(userId, data.provider, data.model, data.endpoint || '', enc, maskKey(data.apiKey), data.latencyMs || 0);
+  ).run(userId, data.provider, data.model, data.endpoint || '', enc, maskKey(key), data.latencyMs || 0);
   return { ok: true, id: info.lastInsertRowid };
 }
 
@@ -190,10 +209,12 @@ async function saveModel(userId, data) {
 async function testModel(userId, modelId) {
   const row = await db.prepare('SELECT * FROM ai_models WHERE id = ? AND user_id = ?').get(modelId, userId);
   if (!row) return { error: 'Model not found' };
-  const apiKey = decrypt(row.encrypted_key);
+  const cfg = PROVIDERS[row.provider];
+  if (!cfg) return { ok: false, category: 'SERVER', message: 'Unsupported provider' };
+  const apiKey = row.encrypted_key ? decrypt(row.encrypted_key) : '';
   const started = Date.now();
   try {
-    await chat({ provider: row.provider, apiKey, model: row.model, system: 'Connectivity test.', user: 'Reply with exactly: OK' });
+    await chat({ provider: row.provider, apiKey, model: row.model, endpoint: row.endpoint || undefined, system: 'Connectivity test.', user: 'Reply with exactly: OK' });
     await db.prepare("UPDATE ai_models SET status = 'CONNECTED', verified_at = datetime('now'), latency_ms = ?, last_error = '', last_error_category = '' WHERE id = ?")
       .run(Date.now() - started, modelId);
     return { ok: true, message: 'Connection healthy', latencyMs: Date.now() - started };

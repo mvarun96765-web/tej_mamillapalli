@@ -7,7 +7,7 @@ module.exports = {
   port: int(process.env.PORT, 8080),
   jwtSecret: process.env.JWT_SECRET || 'dev-insecure-secret-change-me',
   encryptionKey: process.env.ENCRYPTION_KEY || 'dev-insecure-encryption-key',
-  databaseUrl: process.env.DATABASE_URL || 'postgres://varuntej:Varun@2008@127.0.0.1:5432/varuntej',
+  databaseUrl: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/varuntej',
 
   // Angel One
   angelone: {
