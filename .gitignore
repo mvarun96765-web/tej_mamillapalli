@@ -1,0 +1,35 @@
+# ── Node ──────────────────────────────────────────────────────
+node_modules/
+
+# ── Secrets / environment (never commit) ─────────────────────
+backend/.env
+.env
+!*.env.example
+
+# ── Logs / runtime artifacts ─────────────────────────────────
+*.log
+backend/server.log
+
+# ── Flutter ──────────────────────────────────────────────────
+app/build/
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+
+# ── OS / editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# ── Local tooling (never commit) ─────────────────────────
+.freebuff/

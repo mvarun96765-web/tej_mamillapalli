@@ -1,0 +1,4121 @@
+VARUN TEJ APP -- Authentication & User
+Account Flow
+
+1. Objective
+
+The VARUN TEJ application must have a secure and user-friendly authentication system.
+
+The application must include:
+
+        · Welcome/Splash Screen
+        · Multi-step Sign-Up
+        · Email OTP Verification
+        · Phone Number OTP Verification
+        · Username Creation
+        · Password Creation
+        · Confirm Password
+        · Login
+        · Forgot Password
+        · Secure Session Persistence
+        · Logout
+
+The Sign-Up information must not be displayed on one single page. It must be divided into separate
+steps/pages.
+
+2. Complete Application Entry Flow
+
+The application must follow this sequence when opened:
+
+
+
+    OPEN VARUN TEJ APP 
+
+
+
+    
+
+    
+
+
+
+    WELCOME SCREEN        
+
+                          
+
+ Welcome MAMILLAPALLI     
+
+    VARUN TEJ             
+
+
+
+    
+
+    
+
+  
+
+   Is user authenticated
+
+    already?           
+
+  
+
+              1
+              
+
+  
+
+                         
+
+  YES                  NO
+
+                         
+
+                         
+
+                
+
+ DASHBOARD       AUTHENTICATION  
+
+                       SCREEN    
+
+                
+
+                       
+
+              
+
+                                   
+
+                                   
+
+                                 
+             SIGN UP              LOGIN 
+
+                                 
+
+3. Welcome Screen
+
+When the application starts, the first screen must display:
+Welcome MAMILLAPALLI VARUN TEJ
+This is the application's opening/welcome screen.
+After the welcome screen:
+
+        · If the user is already authenticated, directly open the Dashboard.
+        · If the user is not authenticated, open the Authentication screen.
+The user should not see the Sign-Up or Login screen unnecessarily when a valid authenticated session
+already exists.
+
+4. Sign-Up Flow
+
+The Sign-Up process must be divided into multiple separate pages.
+Do NOT put email, phone number, username, password, and confirm password on one page.
+The required sequence is:
+
+   SIGN UP
+        
+
+                                                                         2
+
+
+
+
+ STEP 1                  
+
+ Enter Email Address     
+
+
+
+         
+
+         
+
+
+
+ STEP 2                  
+
+ Email OTP Verification  
+
+
+
+         
+
+         
+
+
+
+ STEP 3                  
+
+ Enter Phone Number      
+
+
+
+         
+
+         
+
+
+
+ STEP 4                  
+
+ Phone OTP Verification  
+
+
+
+         
+
+         
+
+
+
+ STEP 5                  
+
+ Create Username         
+
+
+
+         
+
+         
+
+
+
+ STEP 6                  
+
+ Create Password         
+
+ Confirm Password        
+
+
+
+         
+
+         
+
+
+
+ ACCOUNT CREATED SUCCESSFULLY
+
+
+
+         
+
+            
+         LOGIN
+
+                               3
+5. Step 1 -- Email Registration
+
+The first Sign-Up page must contain only the email registration information.
+
+UI
+
+
+
+  CREATE ACCOUNT           
+
+                           
+
+ Enter your email address  
+
+                           
+
+  
+
+  Email Address             
+
+  
+
+                           
+
+  [ Continue ]             
+
+                           
+
+ Already have an account? Login 
+
+
+
+Requirements
+
+        · Validate email format.
+        · Check whether the email is already registered.
+        · Send an OTP to the email.
+        · Move the user to the Email OTP Verification page.
+
+6. Step 2 -- Email OTP Verification
+
+The second page must be dedicated only to email verification.
+
+
+
+  VERIFY YOUR EMAIL        
+
+                           
+
+ OTP sent to your email    
+
+                           
+
+  [_][_][_][_] 
+
+                           
+
+  Verify OTP               
+
+                           
+
+ Resend OTP                
+
+ Change Email              
+
+
+
+                                  4
+Requirements
+
+        · Accept the OTP.
+        · Verify the OTP through the backend.
+        · Provide Resend OTP.
+        · Provide Change Email.
+        · Do not continue until the email OTP is successfully verified.
+
+7. Step 3 -- Phone Number Registration
+
+After successful email verification, open the phone number page.
+
+
+
+  VERIFY PHONE NUMBER     
+
+                          
+
+ Enter your phone number  
+
+                          
+
+  
+
+  +91 Phone Number         
+
+  
+
+                          
+
+  [ Continue ]            
+
+
+
+Requirements
+
+        · Validate phone number.
+        · Check whether the phone number is already registered.
+        · Send OTP to the phone number.
+        · Move to Phone OTP Verification.
+
+8. Step 4 -- Phone OTP Verification
+
+
+
+  VERIFY PHONE NUMBER     
+
+                          
+
+ OTP sent to your phone   
+
+                          
+
+  [_][_][_][_] 
+
+                          
+
+  Verify OTP              
+
+                          
+
+ Resend OTP               
+
+                             5
+ Change Phone Number   
+
+
+
+Requirements
+
+        · Verify phone OTP through backend.
+        · Allow OTP resend.
+        · Allow phone number correction.
+        · Continue only after successful verification.
+
+9. Step 5 -- Username Creation
+
+After email and phone verification, show the username creation page.
+
+
+
+  CREATE USERNAME      
+
+                       
+
+ Choose your username  
+
+                       
+
+  
+
+  Username              
+
+  
+
+                       
+
+  Username available   
+
+                       
+
+  [ Continue ]         
+
+
+
+Requirements
+
+        · Username must be unique.
+        · Validate allowed characters.
+        · Check username availability through backend.
+        · Do not allow duplicate usernames.
+
+10. Step 6 -- Password Creation
+
+The password page must contain password and confirm password.
+
+
+
+  CREATE PASSWORD      
+
+                       
+
+ Password              
+
+  
+
+                                                        6
+  ············              
+
+  
+
+                               
+
+ Confirm Password              
+
+  
+
+  ············              
+
+  
+
+                               
+
+ Password requirements         
+
+  Minimum required length      
+
+  Strong password              
+
+  Passwords match              
+
+                               
+
+    [ Create Account ]         
+
+
+
+The password must never be stored as plain text.
+The backend must securely hash the password before storing it in the database.
+
+11. Account Creation
+
+After successful completion of all Sign-Up steps:
+
+Email Verified
+          +
+
+Phone Verified
+          +
+
+Username Created
+          +
+
+Password Created
+
+  
+
+  
+
+
+
+  CREATE USER ACCOUNT      
+
+
+
+    
+
+    
+
+
+ ACCOUNT CREATED SUCCESSFULLY
+
+
+
+    
+
+     
+    LOGIN
+
+The account should be created only after all required verification steps are successfully completed.
+
+                                                   7
+12. Login Page
+
+The Login page must be simple.
+
+The user must log in using:
+
+        · Username
+        · Password
+
+
+
+           LOGIN                  
+
+                                  
+
+ Username                         
+
+  
+
+  Enter Username                   
+
+  
+
+                                  
+
+ Password                         
+
+  
+
+  Enter Password                   
+
+  
+
+                                  
+
+  Forgot Password?                
+
+                                  
+
+           [ LOGIN ]              
+
+                                  
+
+ Don't have an account? Sign Up 
+
+
+
+13. Login Authentication Flow
+
+           
+
+            USER LOGIN 
+
+           
+
+                                
+
+                                
+
+           
+
+            Username +            
+
+            Password              
+
+           
+
+                                
+
+                                
+
+           
+
+            Backend checks 
+
+                                     8
+ credentials    
+
+
+
+              
+
+
+
+                 
+INVALID         VALID
+
+                
+
+                
+
+                
+
+ Show Error      Create Secure 
+
+ Message         Session  
+
+ 
+
+                  
+
+                  
+
+                
+                 DASHBOARD 
+
+                
+
+14. Session Persistence
+
+This is an important requirement.
+
+After the user successfully logs in, the application must remember the authenticated session.
+
+Example:
+
+   USER LOGIN
+          
+          
+
+   AUTHENTICATED SESSION CREATED
+          
+          
+
+   USER OPENS DASHBOARD
+          
+          
+
+   USER CLOSES APP
+          
+          
+
+   USER OPENS APP AGAIN
+          
+          
+
+   WELCOME MAMILLAPALLI VARUN TEJ
+          
+          
+
+   CHECK EXISTING SESSION
+          
+
+                                                                         9
+                DIRECTLY
+VALID SESSION?
+
+       
+     YES
+
+       
+       
+OPEN DASHBOARD
+
+Therefore:
+
+The app must NOT ask for username and password every time the application is opened.
+
+The user should remain logged in until the user explicitly chooses Logout or the session becomes
+invalid/expired according to the application's security policy.
+
+15. Logout Flow
+
+Logout must be explicit.
+
+   DASHBOARD
+          
+          
+
+        MENU
+          
+          
+
+      LOGOUT
+          
+          
+
+   Clear Authentication Session
+          
+          
+
+   Return to Authentication Screen
+          
+          
+
+   User must Login again
+
+After logout, reopening the application must NOT automatically enter the Dashboard.
+
+16. Forgot Password Flow
+
+The Login page must contain:
+Forgot Password?
+
+                          10
+When selected:
+
+                
+
+                 FORGOT PASSWORD 
+
+                
+
+                
+
+                
+
+                
+
+                 Enter Email /     
+
+                 Account Identifier 
+
+                
+
+                
+
+                
+
+                
+
+                 Verify OTP        
+
+                
+
+                
+
+                
+
+                
+
+                 Create New Password
+
+                 Confirm Password 
+
+                
+
+                
+
+                
+
+                
+
+                 Password Updated 
+
+                 Successfully      
+
+                
+
+                
+
+                     
+                LOGIN
+
+The exact password-reset verification method should follow the backend authentication/security
+implementation.
+
+17. Complete Authentication Architecture
+
+                VARUN TEJ APP
+
+                             
+
+                             
+
+                
+
+                 Welcome Screen        
+
+                 Welcome MAMILLAPALLI 
+
+                 VARUN TEJ             
+
+                
+
+                             
+
+                                   11
+         
+
+  
+
+   Session Check      
+
+  
+
+         
+
+
+
+                         
+SESSION               NO SESSION
+
+VALID                   
+
+                      
+
+             
+
+              Authentication 
+
+              Screen                
+
+             
+
+                      
+
+           
+
+                                    
+
+                                    
+
+                              
+
+          SIGN UP              LOGIN 
+
+                              
+
+                                    
+
+                                    
+
+         Email Verification Username +
+
+                              Password
+
+                                    
+
+         Phone Verification         
+
+                                    
+
+                                    
+
+         Username + Password        
+
+                                    
+
+             
+
+                        
+
+
+
+                        
+
+                        
+
+             
+
+              DASHBOARD 
+
+             
+
+                      
+
+                      
+
+             
+
+                      LOGOUT      
+
+             
+
+                      
+
+                           
+             Authentication
+
+                  Screen
+
+                  12
+18. Authentication State Model
+
+The application should maintain clear authentication states:
+
+APP_STARTING
+
+  
+
+         
+WELCOME_SCREEN
+
+  
+
+         
+CHECKING_SESSION
+
+  
+
+
+
+                     
+AUTHENTICATED   UNAUTHENTICATED
+
+                  
+
+                       
+DASHBOARD       AUTH_SCREEN
+
+                  
+
+           
+
+                             
+    LOGIN                 SIGNUP
+
+                             
+
+           
+
+                  
+
+                       
+              DASHBOARD
+
+                  
+
+                     
+                LOGOUT
+
+                  
+
+                       
+             AUTH_SCREEN
+
+19. Important UX Rules
+
+      1. Do not put all Sign-Up fields on one page.
+      2. Email and Email OTP must have separate pages.
+      3. Phone number and Phone OTP must have separate pages.
+      4. Username must have its own page.
+      5. Password creation must have its own page.
+      6. Confirm Password must be included on the password page.
+      7. Login must use Username + Password.
+      8. Forgot Password must be available from Login.
+      9. Successful login must create a persistent authenticated session.
+     10. Reopening the app must not require login again while the session is valid.
+
+                                                                        13
+11. Logout must explicitly clear the authenticated session.
+12. After logout, the user must authenticate again.
+13. Passwords must never be stored as plain text.
+14. OTP verification must be handled securely by the backend.
+15. The backend must be the source of truth for authentication and account verification.
+16. The app should show clear validation and error messages.
+17. The user should be able to go back to the previous registration step where appropriate.
+18. Already verified email/phone information should not unnecessarily require repeated verification
+
+     during the same registration flow.
+
+20. Final User Journey
+
+APP OPEN
+
+     
+Welcome MAMILLAPALLI VARUN TEJ
+
+     
+Session Check
+
+
+
+
+
+ Existing Valid Session?        
+
+
+
+               
+
+  
+
+                        
+
+  YES                   NO
+
+                        
+
+                            
+DASHBOARD         AUTHENTICATION
+
+                        
+
+                 
+
+                               
+               SIGN UP      LOGIN
+
+                                
+
+                                
+
+           EMAIL                
+
+                                
+
+           EMAIL OTP            
+
+                                
+
+           PHONE NUMBER         
+
+                                
+
+           PHONE OTP            
+
+                                
+
+           USERNAME             
+
+                                
+
+           PASSWORD             
+
+                                
+
+          ACCOUNT CREATED       
+
+                                   14
+                  
+
+LOGIN 
+
+         
+DASHBOARD
+
+       
+APP CLOSE
+
+       
+APP OPEN
+
+                   
+Welcome MAMILLAPALLI VARUN TEJ
+
+              
+Existing Session
+
+         
+DASHBOARD
+
+       
+LOGOUT
+
+              
+AUTHENTICATION
+
+Final Requirement
+
+The VARUN TEJ authentication system must feel like a professional production application. The
+registration process must be a clean multi-step experience, verification must happen before account
+creation, login must use username and password, and authenticated users must remain logged in
+across normal app restarts until they explicitly log out or their session becomes invalid.
+
+                                15
+VARUN TEJ TRADING APP
+
+PART 2 -- PROFESSIONAL DASHBOARD, LIVE MARKET DATA & AI
+INTELLIGENCE
+
+Continuation of Part 1 -- Authentication System
+
+This document is a direct continuation of the previously prepared VARUN TEJ Authentication document.
+
+The Authentication system is already defined separately.
+
+This document starts after successful authentication and defines the main Dashboard, live market
+data, Stocks, Options, Trades, News Intelligence, AI analysis pipeline, API-key rotation system, Profile,
+Security PIN, and application architecture.
+
+1. Application Purpose
+
+VARUN TEJ is a professional market-intelligence and AI trading-analysis application.
+
+The application is inspired by the professional experience of applications such as Groww and Angel One,
+but it is not intended to be a direct copy of their UI.
+
+The application will primarily provide:
+
+        · Live market prices
+        · Stocks
+        · Options
+        · Market news
+        · Historical news analysis
+        · AI-based market analysis
+        · AI-generated signals
+        · Target price
+        · Stop-loss
+        · Avoid signals
+        · Top stock opportunities
+        · Top option opportunities
+        · Daily market intelligence
+The application itself should not execute trades or place buy/sell orders.
+
+It is an analysis and decision-support application.
+
+                                                                         1
+2. Backend Architecture Requirement
+
+The user must NOT be required to manually start the backend from PowerShell every time the
+application is opened.
+
+The production architecture must be:
+
+            USER PHONE
+
+            
+
+            
+
+  
+
+   VARUN TEJ APP 
+
+   Flutter                         
+
+  
+                   HTTPS
+
+            
+
+  
+   CLOUD BACKEND 
+   VARUN TEJ API 
+
+  
+
+            
+
+
+
+                                        
+
+                                          
+Market API  News API                 AI APIs
+
+                                        
+
+                                          
+Live Data   News Data                AI Analysis
+
+The backend must be deployed to a production/cloud environment.
+Therefore:
+
+   User opens mobile app
+                 
+
+   Welcome animation
+                 
+
+   App connects to hosted backend
+                 
+
+   Backend is already running
+                 
+
+   Dashboard loads
+
+The user must not need to:
+
+                                     2
+   Open laptop
+   
+   Open PowerShell
+   
+   Run backend command
+   
+   Keep laptop running
+
+for the mobile application to function.
+
+3. Application Opening Flow
+
+The application opening experience must be professional.
+
+APP OPEN
+
+  
+
+  
+
+
+
+                                         
+
+    APP ICON / ANIMATION                 
+
+                                         
+
+ Welcome MAMILLAPALLI VARUN              
+
+          TEJ                            
+
+                                         
+
+
+
+          
+
+                    
+    SECURITY VERIFICATION
+
+          
+
+                    
+    PIN / FINGERPRINT
+
+          
+
+                    
+    SESSION VERIFICATION
+
+          
+
+                    
+    BACKEND CONNECTION
+
+          
+
+                 
+          DASHBOARD
+
+The welcome text:
+Welcome MAMILLAPALLI VARUN TEJ
+must be used only during the application's opening/welcome experience.
+
+                                           3
+It should not be repeatedly displayed throughout every page.
+
+4. Security Unlock
+
+The application should allow the user to create a personal application security PIN.
+During initial setup:
+
+   Create Security PIN
+                 
+                 
+
+   Confirm Security PIN
+                 
+                 
+
+   Enable Fingerprint / Biometric
+                 
+                 
+
+   Security Setup Complete
+
+When the app is opened:
+
+APP OPEN         Dashboard
+                  Remain Locked
+     
+     
+PIN / BIOMETRIC
+
+     
+      Correct 
+     
+      Incorrect
+
+The application should use the device's secure biometric authentication mechanism where available.
+The security PIN must never be stored as plain text.
+
+5. Persistent Login
+
+After the user completes Sign-Up and Login successfully, the authentication session must persist
+securely.
+
+Example:
+
+   FIRST LOGIN
+          
+
+                                   4
+          
+   Authenticated Session
+
+          
+          
+   Dashboard
+          
+          
+   Close App
+          
+          
+   Open App Again
+          
+          
+   Security PIN / Fingerprint
+          
+          
+   Dashboard
+
+The application must NOT ask the user to enter username and password every time the application
+opens.
+
+Username/password login should be required again only when:
+
+        · The user explicitly logs out.
+        · The authentication session becomes invalid.
+        · The backend requires re-authentication.
+
+6. Dashboard Design
+
+The Dashboard must have a premium, professional trading-app appearance.
+The primary structure:
+
+
+
+ [ APP ICON ]  [ SEARCH ]            [ PROFILE ]
+
+
+
+                                     
+
+               LIVE MARKET           
+
+                                     
+
+  NIFTY                     SENSEX   
+
+  LIVE                      LIVE     
+
+                                     
+
+
+
+                                     
+
+               TOP STOCK GAINERS     
+
+                                     
+
+
+
+                                  5
+                         
+
+  TOP OPTION GAINERS     
+
+                         
+
+
+
+                         
+
+  TRADES                 
+
+                         
+
+
+
+                         
+
+  STOCKS                 
+
+                         
+
+
+
+                         
+
+  OPTIONS                
+
+                         
+
+
+
+7. Dashboard Header
+
+The header must contain three main elements.
+
+Left
+
+VARUN TEJ application icon.
+The actual icon image should be supplied by the developer/user later.
+Use an asset placeholder:
+
+   assets/images/varun_tej_app_icon.png
+The final icon can be replaced without changing the dashboard architecture.
+
+Center
+
+Search bar.
+Example:
+
+   Search stocks, companies, options...
+
+Right
+
+User profile picture.
+
+                      6
+Example:
+
+   [ Profile Picture ]
+
+Tapping it opens the Profile page.
+
+8. Search
+
+The search function must support the application's supported instruments.
+Search categories:
+
+   SEARCH
+     
+      Stocks
+     
+      Companies
+     
+      Trading Symbols
+     
+      NIFTY
+     
+      SENSEX
+     
+      Options
+
+The application should not include unnecessary product categories such as mutual funds or unrelated
+financial products because the planned scope is specifically:
+Stocks + Options.
+
+9. Live Market Section
+
+The Dashboard must display:
+        · NIFTY
+        · SENSEX
+
+using live market data.
+Example:
+
+                                                                         7
+
+
+ LIVE MARKET                
+
+                            
+
+ NIFTY        SENSEX        
+
+ XX,XXX.XX    XX,XXX.XX     
+
+ +XXX.XX      +XXX.XX       
+
+ +X.XX%       +X.XX%        
+
+                            
+
+ LIVE         LIVE          
+
+
+
+The values must come from the configured live-market API.
+The application must never display invented values as live prices.
+
+10. Angel One Live Market Data
+
+Angel One SmartAPI will be used as the live market-data source.
+The production system must use secure backend configuration.
+The actual credentials supplied by the user must be inserted later into secure environment variables.
+Recommended structure:
+
+   ANGELONE_API_KEY=<YOUR_ANGELONE_API_KEY>
+   ANGELONE_CLIENT_CODE=<YOUR_CLIENT_CODE>
+   ANGELONE_TOTP_SECRET=<YOUR_TOTP_SECRET>
+   ANGELONE_PIN=<YOUR_ANGELONE_PIN>
+
+Do not hard-code the actual values into Flutter source code.
+Do not commit them to GitHub.
+Do not place them inside publicly accessible configuration files.
+
+11. Live Market Architecture
+
+                                     ANGEL ONE
+                                           
+                                           
+
+                              SmartAPI Layer
+                                           
+
+                         8
+                           
+             Market Data Service
+
+                   
+
+           
+
+                                      
+
+                                   
+NIFTY              SENSEX       STOCKS
+
+                                      
+
+           
+
+                   
+
+                       
+             VARUN TEJ API
+
+                   
+
+                           
+             Flutter Dashboard
+
+Where supported by the market-data service, real-time streaming/WebSocket architecture should be
+used rather than repeatedly polling the API unnecessarily.
+
+12. Top Stock Gainers
+
+Below the live NIFTY/SENSEX section:
+TOP STOCK GAINERS
+Only stocks should be shown here.
+Example:
+
+TOP STOCK GAINERS
+
+Company A    XXX.XX         +X.XX%
+Company B    XXX.XX         +X.XX%
+Company C    XXX.XX         +X.XX%
+Company D    XXX.XX         +X.XX%
+
+The list must be generated from live/current market data.
+
+13. Top Option Gainers
+
+Immediately below Top Stock Gainers:
+TOP OPTION GAINERS
+
+                                        9
+Only options should be shown here.
+Example:
+
+TOP OPTION GAINERS
+
+NIFTY 25XXX CE       XXX.XX         +XX.XX%
+NIFTY 25XXX PE       XXX.XX         +XX.XX%
+BANKNIFTY XXXXX CE   XXX.XX         +XX.XX%
+
+The option-gainer engine should consider appropriate market metrics available from the live data
+source.
+
+14. Trades Section
+
+The Dashboard must contain:
+TRADES
+This section is for the application's AI-generated trading opportunities/signals.
+The application itself must not automatically place trades.
+The Trades section should contain only high-confidence opportunities according to the configured
+analysis rules.
+Example:
+
+TRADES
+
+
+
+ OPTION                             
+
+ NIFTY XXXXX CE                     
+
+                                    
+
+ Entry Zone: XXX                    
+
+ Target: XXX                        
+
+ Stop Loss: XXX                     
+
+                                    
+
+ AI Confidence: XX%                 
+
+ Signal: BUY / AVOID                
+
+
+
+                                    10
+15. Daily Trading Analysis Window
+
+The primary trading-analysis window is:
+09:00 AM to 03:00 PM
+The system should operate according to the market schedule and configured timezone:
+Asia/Kolkata
+The primary daily workflow:
+
+09:00 AM                Window  Ends
+     
+     
+
+News + Market Analysis
+     
+     
+
+AI Processing
+     
+     
+
+Opportunity Detection
+     
+     
+
+Trades Section Update
+     
+     
+
+Continue Monitoring
+     
+     
+
+03:00 PM
+     
+     
+
+Daily Trading Analysis
+
+16. News API
+
+A separate News API will be connected to the backend.
+The News API has a free-tier limitation of approximately:
+100 requests per day
+The system must therefore use the available request quota efficiently.
+
+                                      11
+The backend must not make uncontrolled requests.
+
+17. News Request Schedule
+
+The planned schedule is approximately:
+
+Every 3 minutes and 40 seconds
+
+during the trading-analysis window.
+
+Target pattern:
+
+   09:00:00
+   09:03:40
+   09:07:20
+   09:11:00
+   09:14:40
+   ...
+   ...
+   03:00 PM
+
+The scheduler must calculate the next request based on the previous scheduled interval rather than
+creating overlapping jobs.
+
+18. News Request Window
+
+Each request must retrieve only the news that became available since the previous successful news
+collection window.
+
+Example:
+
+REQUEST 1
+09:00
+
+         
+         
+Retrieve relevant news
+from previous checkpoint  09:00
+
+REQUEST 2      newly  available  news
+09:03:40       1
+
+         
+
+         
+Retrieve only
+since REQUEST
+
+                                       12
+REQUEST 3      newly  available  news
+09:07:20       2
+
+         
+
+         
+Retrieve only
+since REQUEST
+
+This reduces unnecessary duplicate news retrieval.
+
+19. First Request of the Day
+
+At the beginning of the daily news-analysis window, the system should retrieve the relevant news that
+occurred after the previous day's final collection checkpoint.
+
+Example:
+
+   Previous Day
+   03:00 PM
+
+        
+         No collection overnight
+        
+        
+   Next Trading Day
+   09:00 AM
+        
+        
+   Collect relevant news
+   from previous checkpoint  09:00 AM
+
+After the first request, subsequent requests should use incremental collection.
+
+20. Duplicate News Protection
+
+The backend must maintain a database of collected news.
+
+Each news article should have a unique identifier/fingerprint based on available metadata such as:
+
+        · Source
+        · URL
+        · Published timestamp
+        · Title
+        · Company/instrument
+        · Content fingerprint
+
+                                                    13
+Architecture:
+
+   NEWS API
+        
+        
+
+   News Collector
+        
+        
+
+   Duplicate Detection
+        
+         Duplicate  Ignore
+        
+         New  Continue
+
+This prevents the same article from being repeatedly sent through the AI pipeline.
+
+21. Three-AI Analysis Architecture
+
+The application will use three separate AI analysis stages.
+
+                                         NEWS API
+                                              
+                                              
+
+                                News Collection
+                                              
+                                              
+
+                                Duplicate Filter
+                                              
+                                              
+
+                                    AI MODEL 1
+                                              
+                                              
+
+                                    AI MODEL 2
+                                              
+                                              
+
+                                    AI MODEL 3
+                                              
+                                              
+
+                                  FINAL REPORT
+                                              
+                                              
+
+                            VARUN TEJ DATABASE
+                                              
+                                              
+
+                          Dashboard / Trades
+
+                                                                        14
+22. AI Model 1 -- News Intelligence
+
+AI Model 1 is responsible for analyzing incoming news.
+
+Its tasks include:
+
+        · Identify duplicate/repeated news
+        · Determine whether the article is original or republished
+        · Identify the relevant company
+        · Determine whether the news is market-relevant
+        · Determine whether the news is positive
+        · Determine whether the news is negative
+        · Determine whether the news is neutral
+        · Determine potential company impact
+        · Remove irrelevant news
+        · Remove low-value/general news
+
+Flow:
+
+Incoming News              Only
+
+         
+
+         
+AI MODEL 1
+
+         
+          Duplicate
+          Irrelevant
+          Neutral
+          Positive
+          Negative
+
+                         
+
+                         
+          Relevant News
+
+Only meaningful market-relevant information should continue to AI Model 2.
+
+23. AI Model 2 -- Market Impact Analysis
+
+AI Model 2 receives the filtered relevant news from Model 1.
+Its responsibility is deeper market-impact analysis.
+It should determine:
+
+        · Why the news matters
+        · Company impact
+
+                                 15
+        · Potential bullish impact
+        · Potential bearish impact
+        · Expected market reaction
+        · Strength of the impact
+        · Relevant stock/option relationship
+        · Risk factors
+        · Supporting market context
+
+Example:
+
+   AI MODEL 1
+            
+             Relevant News
+            
+
+   AI MODEL 2
+            
+             Company Impact
+             Market Impact
+             Bullish/Bearish
+             Risk
+             Opportunity
+                         
+                         
+              Structured Report
+
+24. AI Model 3 -- Final Trading Intelligence
+
+AI Model 3 receives the structured analysis from Model 2.
+
+It is responsible for producing the final report.
+
+Potential outputs include:
+
+        · BUY / AVOID / WATCH
+        · Stock opportunity
+        · Option opportunity
+        · Target price
+        · Stop-loss
+        · Expected timeframe
+        · Risk level
+        · Confidence score
+        · Reasoning summary
+
+For options, the final system should consider:
+
+        · Underlying asset
+        · Strike
+
+                                                                        16
+        · Expiry
+        · Option type
+        · Current price
+        · Volatility
+        · Liquidity
+        · Open interest where available
+        · Market trend
+        · News impact
+
+The final output should be structured and stored in the database.
+
+25. Three-AI Pipeline
+
+  NEW NEWS
+
+           
+
+           
+
+
+
+  AI MODEL 1       
+
+ News Classification 
+
+
+
+                
+  Relevant News
+
+           
+
+           
+
+
+
+  AI MODEL 2       
+
+ Market Impact     
+
+ Analysis          
+
+
+
+              
+  Structured Data
+
+           
+
+           
+
+
+
+  AI MODEL 3       
+
+ Final Intelligence 
+
+ & Signal Generation 
+
+
+
+           
+
+              
+  FINAL REPORT
+
+           
+
+              
+  DATABASE
+
+           
+
+
+
+                   
+
+                       17
+TRADES  STOCKS
+        OPTIONS
+
+26. AI API Key Management
+
+All three AI models must support multiple API keys.
+
+There are three separate AI jobs:
+
+   AI WORK 1
+   News Intelligence
+
+   AI WORK 2
+   Market Impact Analysis
+
+   AI WORK 3
+   Final Trading Intelligence
+
+Each AI work must have its own API-key pool.
+
+27. Ten API Keys Per AI Work
+
+Each AI work must support up to 10 API keys.
+
+Therefore:
+
+   AI WORK 1
+      Key 01
+      Key 02
+      Key 03
+      Key 04
+      Key 05
+      Key 06
+      Key 07
+      Key 08
+      Key 09
+      Key 10
+
+   AI WORK 2
+      Key 01
+      Key 02
+      Key 03
+      Key 04
+
+                                                                        18
+      Key 05
+      Key 06
+      Key 07
+      Key 08
+      Key 09
+      Key 10
+
+   AI WORK 3
+      Key 01
+      Key 02
+      Key 03
+      Key 04
+      Key 05
+      Key 06
+      Key 07
+      Key 08
+      Key 09
+      Key 10
+
+Total configurable AI API keys:
+
+30
+
+28. AI API Key Rotation
+
+The system must automatically switch to the next configured key when the current key reaches a
+provider-defined quota/rate limit or otherwise becomes temporarily unusable.
+
+Example:
+
+   AI MODEL 1
+          
+          
+
+   KEY 01
+          
+           SUCCESS  Continue using Key 01
+          
+           LIMIT / RATE ERROR
+                          
+                          
+                       KEY 02
+                          
+                           SUCCESS
+                          
+                           LIMIT
+                                       
+                                       
+
+                                                                        19
+                                    KEY 03
+                                       
+                                       
+
+                                    ...
+                                       
+                                       
+
+                                    KEY 10
+
+The system should continue through the available keys automatically.
+
+When a key becomes available again, the key manager can make it eligible according to the provider's
+quota-reset information.
+
+The application must not bypass provider restrictions in a way that violates the provider's terms.
+
+29. AI Settings Screen
+
+Settings must contain three separate AI sections.
+
+SETTINGS  WORK 1  Keys
+           API    Keys
+      AI          Keys
+          WORK 2
+           API
+      AI
+          WORK 3
+           API
+      AI
+
+Each section must allow up to 10 keys.
+Example:
+
+   AI WORK 1
+   
+   API Key 01 [ ******** ]
+   API Key 02 [ ******** ]
+   API Key 03 [ ******** ]
+   ...
+   API Key 10 [ ******** ]
+
+   [ Save ]
+
+The same structure should exist for AI Work 2 and AI Work 3.
+
+                                                   20
+30. One-Year Historical News Analysis
+
+The application must provide a way to perform a deeper historical analysis for supported stocks/
+options.
+
+Example:
+
+   STOCK DETAILS
+                
+                
+
+   [ ANALYZE ]
+                
+                
+
+   Historical News Analysis
+                
+                
+
+   Previous 1 Year
+                
+                
+
+   Relevant News Collection
+                
+                
+
+   AI Model 1
+                
+                
+
+   AI Model 2
+                
+                
+
+   AI Model 3
+                
+                
+
+   Final Historical Report
+
+The analysis must be performed in a controlled, asynchronous backend job.
+
+The mobile application should display job status such as:
+
+Preparing historical  analysis...
+Collecting data...
+Filtering news...
+AI Analysis 1/3...
+AI Analysis 2/3...
+Final Analysis...
+Completed
+
+                                   21
+31. Historical Analysis Must Not Overload APIs
+
+The one-year analysis must NOT simply send one enormous request containing all historical news to an
+AI provider.
+
+Instead:
+
+   1 Year News
+            
+            
+
+   Collect
+            
+            
+
+   Deduplicate
+            
+            
+
+   Group by Company / Time
+            
+            
+
+   Create manageable batches
+            
+            
+
+   AI Analysis
+            
+            
+
+   Aggregate Results
+            
+            
+
+   Final Report
+
+This makes the system more reliable and reduces token/request problems.
+
+32. Stock Analysis
+
+The Stocks section should focus only on stocks that satisfy the application's configured analysis criteria.
+A stock analysis record can contain:
+
+Company          Impact
+Current Price
+Market Trend
+News Sentiment
+Historical News
+AI Signal
+Target Price
+
+                         22
+   Stop Loss
+   Expected Timeframe
+   Risk
+   Confidence
+
+The user specifically wants longer-duration stock opportunities such as approximately:
+
+        · 1 month
+        · 2 months
+        · 3 months
+The final timeframe must be determined by the analysis system and presented clearly rather than
+guaranteeing a return.
+
+33. Options Analysis
+
+Options are a major part of the application.
+
+The system should identify potentially strong option opportunities using:
+
+        · Live option price
+        · Underlying price
+        · Trend
+        · News
+        · Volatility
+        · Open Interest
+        · Volume
+        · Expiry
+        · Strike
+        · AI analysis
+Example:
+
+   OPTION OPPORTUNITY
+
+   Instrument: NIFTY XXXXX CE
+
+   Signal: BUY / WATCH / AVOID
+
+   Entry Zone: XXX
+   Target: XXX
+   Stop Loss: XXX
+
+   Time Horizon:
+   Intraday / Short Term
+
+   AI Confidence:
+   XX%
+
+                                                                        23
+   Reason:
+   Market + News + Technical Context
+
+These are AI-generated signals, not guaranteed profits.
+
+34. Trades Daily Workflow
+
+The daily trading workflow should operate approximately between:
+09:00 AM and 03:00 PM IST
+Architecture:
+
+09:00 AM
+
+
+
+        Data
+Market
+
+     +
+News
+
+
+
+     
+AI Model 1
+
+
+
+     
+AI Model 2
+
+
+
+     
+AI Model 3
+
+
+
+     
+Opportunity Ranking
+
+
+
+     
+Trades Section
+
+
+
+     
+Next Scheduled Update
+
+
+
+     
+Continue Until 03:00 PM
+
+                         24
+35. Final Dashboard Order
+
+The Dashboard must follow this order:
+
+   1. App Icon + Search + Profile
+   2. NIFTY Live
+   3. SENSEX Live
+   4. Top Stock Gainers
+   5. Top Option Gainers
+   6. Trades
+   7. Stocks
+   8. Options
+
+No unnecessary financial modules should be placed on the primary Dashboard.
+
+The application's main market scope is:
+
+STOCKS + OPTIONS
+
+36. Profile
+
+When the user taps the profile picture:
+
+   PROFILE
+        
+         Profile Picture
+        
+         Name
+        
+         Username
+        
+         Security
+        
+         Settings
+        
+         Logout
+
+The user must be able to change the profile picture.
+
+                                                                        25
+The profile should display:
+
+        · Name
+        · Username
+        · Profile picture
+The username must remain unique across the application.
+
+37. Username Uniqueness
+
+If one user has already registered a username:
+
+   Username: VARUNTEJ
+
+   Existing
+            
+            
+
+   Another user tries:
+   VARUNTEJ
+
+            
+            
+   REJECT
+            
+            
+   "Username already exists"
+
+The backend database must enforce username uniqueness.
+
+The client-side check alone is not sufficient.
+
+38. Personal-Use Security Model
+
+The application is intended for personal use.
+
+Security should therefore be treated as a first-class requirement.
+
+Protect:
+
+        · Authentication tokens
+        · User credentials
+        · Security PIN
+        · Biometric authentication state
+        · Angel One credentials
+        · AI API keys
+        · News API credentials
+
+                                                                        26
+        · Backend secrets
+Sensitive secrets must be stored securely.
+
+39. Light and Dark Theme
+
+The application must support both:
+
+Light Theme
+
+Professional white/light interface.
+
+Dark Theme
+
+Professional black/dark interface.
+
+The default application appearance can be controlled through settings.
+
+Example:
+
+   SETTINGS
+        
+        
+
+   APPEARANCE
+        
+         Light
+        
+         Dark
+        
+         System
+
+The welcome screen is the only area that may use its dedicated opening visual treatment.
+
+After entering the application, the normal Dashboard must follow the selected theme.
+
+40. Professional Visual Design
+
+The Dashboard must look like a professional market application.
+
+Design requirements:
+
+        · Clean typography
+        · Strong information hierarchy
+        · Consistent spacing
+        · Professional cards
+
+                                                                        27
+        · Smooth animations
+        · Proper loading states
+        · Proper error states
+        · Responsive design
+        · Clear live indicators
+        · Clear positive/negative market movement
+        · Minimal unnecessary decoration
+
+Do not overcrowd the Dashboard.
+
+41. Complete Dashboard Architecture
+
+                       VARUN TEJ APP
+
+                             
+
+                                       
+                     Welcome Animation
+
+                             
+
+                                       
+                     Security Verification
+
+                             
+
+                                     
+                     Authentication State
+
+                             
+
+                                
+                       DASHBOARD
+
+                             
+
+  
+
+                                                         
+
+                                                            
+  Header                     Live Market                 Profile
+
+                             
+
+                       
+
+                                  
+
+                     NIFTY     SENSEX
+
+  
+
+     
+  Search
+
+  
+
+  
+
+
+
+          MARKET OPPORTUNITIES                         
+
+
+
+ Top Stock Gainers                                     
+
+ Top Option Gainers                                    
+
+
+
+                     
+
+                          
+                     TRADES
+
+                                                   28
+                 
+                 
+        STOCKS
+
+                 
+                 
+        OPTIONS
+
+42. Complete AI + Market Architecture
+
+        ANGEL ONE
+
+        
+
+                  
+        LIVE MARKET DATA
+
+        
+
+                  
+        VARUN TEJ BACKEND
+
+        
+
+
+
+                              
+
+                                 
+Stocks  Options               Indices
+
+                              
+
+
+
+        
+
+                 
+        NEWS API
+
+        
+
+                    
+        News Collector
+
+        
+
+                    
+        Duplicate Filter
+
+        
+
+                 
+        AI MODEL 1
+
+        
+
+                 
+        AI MODEL 2
+
+        
+
+                 
+        AI MODEL 3
+
+        
+
+                        
+        Final Intelligence
+
+        
+
+  
+
+                            
+
+                              29
+                                                
+TRADES    STOCKS                             OPTIONS
+
+                                             
+
+
+
+          
+
+                    
+        FLUTTER DASHBOARD
+
+43. Complete API-Key Architecture
+
+          AI KEY MANAGER
+
+            
+
+  
+
+                                               
+
+                                                  
+WORK 1    WORK 2                               WORK 3
+
+                                               
+
+  
+ 10 Keys   10 Keys   10 Keys 
+
+  
+
+                                               
+
+                                                  
+Rotation  Rotation                           Rotation
+
+                                               
+
+  
+
+            
+
+                   
+          AI SERVICES
+
+Total:
+3 AI works × 10 keys = 30 configurable keys
+
+44. Final End-to-End Application Flow
+
+   APP OPEN
+        
+        
+
+   Welcome MAMILLAPALLI VARUN TEJ
+        
+        
+
+   PIN / FINGERPRINT
+        
+
+                                               30
+     
+SESSION CHECK
+
+     
+      Invalid  Authentication
+     
+      Valid
+
+                  
+                  
+          DASHBOARD
+
+                  
+                   Search
+                  
+                   NIFTY Live
+                  
+                   SENSEX Live
+                  
+                   Top Stock Gainers
+                  
+                   Top Option Gainers
+                  
+                   Trades
+                  
+                   Stocks
+                  
+                   Options
+                  
+                   Profile
+
+45. Core Product Principle
+
+The final VARUN TEJ application must be built around the following architecture:
+
+        VARUN TEJ
+
+        
+
+                          
+        PROFESSIONAL MARKET APP
+
+        
+
+
+
+                                           
+
+                                              
+STOCKS  OPTIONS                        LIVE MARKET
+
+                                           
+
+
+
+        
+
+               
+        NEWS DATA
+
+                                       31
+                                              
+                                              
+                                    3-STAGE AI
+                                    INTELLIGENCE
+                                              
+                                              
+                              TRADING SIGNALS
+                                              
+                                              
+                                  TRADES SECTION
+
+The application must focus specifically on Stocks + Options + Live Market Data + News Intelligence +
+AI Analysis + Signals.
+
+It must not become a generic financial super-app.
+
+The application must not automatically execute trades.
+
+All AI-generated targets, stop-losses, signals, and opportunities must be presented as analysis/decision-
+support outputs rather than guaranteed results.
+
+46. Implementation Requirement
+
+The coding implementation must preserve the separation between:
+
+Flutter  Frontend
+Backend
+         
+
+         
+         API
+
+         
+          Authentication
+          Market Data
+          News
+          AI Orchestration
+          API Key Management
+          Database
+          Scheduler
+
+The backend must be deployed independently so that the user's phone does not depend on the user's
+laptop being powered on.
+The mobile application should communicate with the backend through secure HTTPS APIs.
+All API credentials must be configurable later through secure environment variables/secrets.
+The application icon should remain an asset placeholder so the final icon can be supplied later.
+
+                              32
+The final system must be production-oriented, secure, responsive, and suitable for continuous live
+market-data and AI-analysis operation.
+
+                                                                        33
+VARUN TEJ TRADING APP
+
+PART 3 -- PROFILE, SETTINGS, NOTIFICATIONS & AI API KEY
+MANAGEMENT
+
+Continuation of Part 1 -- Authentication
+Continuation of Part 2 -- Dashboard, Market Data & AI Intelligence
+
+This document adds the Profile, Settings, Notifications, and AI API Key Management system to the
+existing VARUN TEJ application.
+
+Do not redesign or remove the existing Authentication or Dashboard architecture.
+
+Implement this document as an additional module integrated with the existing application.
+
+1. Profile Access
+
+The Dashboard already contains the user's profile picture in the top-right corner.
+
+When the user taps the profile picture:
+
+   DASHBOARD
+            
+            
+
+   [ PROFILE PICTURE ]
+            
+            
+
+   PROFILE PAGE
+
+The Profile page must allow the user to manage:
+
+        · Profile picture
+        · Name
+        · Username
+        · Security settings
+        · Application settings
+        · Logout
+
+2. Profile Page
+
+Design the Profile page professionally.
+
+                                                                         1
+
+
+            PROFILE                                
+
+                                                   
+
+            [ PROFILE IMAGE ]                      
+
+            Edit Photo                             
+
+                                                   
+
+ Name                                              
+
+ MAMILLAPALLI VARUN TEJ                            
+
+                                                   
+
+ Username                                          
+
+ @username                                         
+
+                                                   
+
+  
+
+                                                   
+
+ Security                                          
+
+ Settings                                          
+
+ Logout                                               
+
+
+
+3. Edit Profile Picture
+
+When the user taps Edit Photo:
+
+Edit  Profile Picture
+
+           
+            Camera
+           
+            Gallery
+           
+            Remove Photo
+
+The selected image must be stored securely and associated with the user's account.
+The UI should immediately display the updated profile picture after successful update.
+
+4. Edit Name
+
+The user must be able to edit their display name.
+Example:
+
+                                                   2
+   Name
+   [ MAMILLAPALLI VARUN TEJ ]
+
+                            [ SAVE ]
+
+The name is the display name and does not have to be globally unique.
+
+5. Username
+
+The username must remain unique.
+
+When the user changes their username:
+
+   Enter New Username
+                
+                
+
+   Backend Username Availability Check
+                
+                 Available  Save
+                
+                 Already Used  Reject
+
+The backend/database must enforce uniqueness.
+
+Do not rely only on Flutter/client-side validation.
+
+6. Settings Access
+
+The Profile page must contain:
+
+Settings
+
+When the user taps Settings:
+
+   PROFILE
+        
+        
+
+   SETTINGS
+        
+         Notifications
+        
+         AI API Keys
+        
+
+                                                                         3
+         Security
+        
+         Appearance
+        
+         Account
+
+The settings architecture must be modular so additional settings can be added later.
+
+7. Settings Page
+
+Professional layout:
+
+
+
+              SETTINGS        
+
+
+
+                              
+
+  Notifications               
+
+ Manage app notifications     
+
+                              
+
+  AI API Keys                 
+
+ Manage AI provider API keys  
+
+                              
+
+  Security                                                                  
+
+ PIN and biometric settings   
+
+                              
+
+  Appearance                  
+
+ Light / Dark / System        
+
+                              
+
+  Account                     
+
+ Account management           
+
+                              
+
+
+
+8. Notifications Settings
+
+The Settings page must contain:
+Notifications
+When the user taps it:
+
+   SETTINGS
+          
+
+                                                                         4
+          
+   NOTIFICATIONS
+
+The Notifications page must contain multiple notification categories.
+Every notification category must have an individual:
+ON / OFF toggle
+Example:
+
+New Trade                  [ ON ]
+New High-Confidence Trade  [ ON ]
+Trade Update               [ ON ]
+Target Reached             [ ON ]
+Stop Loss Alert            [ ON ]
+New Stock Opportunity      [ ON ]
+New Option Opportunity     [ ON ]
+Market Alert               [ ON ]
+Important News             [ ON ]
+Major Company News         [ ON ]
+Bullish News               [ OFF ]
+Bearish News               [ OFF ]
+News Analysis Completed    [ ON ]
+AI Analysis Completed      [ ON ]
+Daily Market Summary       [ ON ]
+Market Open                [ OFF ]
+Market Close               [ OFF ]
+
+The exact notification categories should be implemented as configurable notification types rather than
+hard-coded UI-only switches.
+
+9. Notification Types
+
+Implement the following notification types.
+
+9.1 New Trade
+
+Triggered when a new AI-generated trade opportunity is added to the Trades section.
+Example:
+
+    New Trade
+   NIFTY XXXXX CE
+
+                                    5
+   AI analysis identified a new opportunity.
+If the user turns this notification OFF:
+
+   New Trade [ OFF ]
+the user must NOT receive New Trade notifications.
+The trade itself may still appear inside the application.
+
+10. High-Confidence Trade
+
+Notification for a newly detected high-confidence opportunity.
+   High-Confidence Trade [ ON/OFF ]
+
+This must be independent from the normal New Trade notification.
+
+11. Trade Update
+
+If an existing AI trade changes significantly:
+   Trade Update [ ON/OFF ]
+
+Examples:
+        · Target changed
+        · Stop-loss changed
+        · Signal changed
+        · Risk level changed
+        · AI analysis updated
+
+12. Target Reached
+
+Notify the user when an analyzed opportunity reaches its configured target level.
+   Target Reached [ ON/OFF ]
+
+                                                                         6
+Example:
+    Target Reached
+   NIFTY XXXXX CE
+   Target: XXX
+
+This notification must only be generated when the backend confirms the relevant market condition.
+
+13. Stop Loss Alert
+
+Notify the user when the configured stop-loss level is reached.
+   Stop Loss Alert [ ON/OFF ]
+
+Example:
+    Stop Loss Alert
+   NIFTY XXXXX CE
+   Stop Loss: XXX
+
+This is an informational alert only.
+The application must NOT automatically place or execute an order.
+
+14. New Stock Opportunity
+
+Notify when the AI system identifies a new stock opportunity.
+   New Stock Opportunity [ ON/OFF ]
+
+Example:
+    New Stock Opportunity
+   Company: XXXXX
+   Target: XXX
+   Time Horizon: 1 Month
+
+                                                                         7
+15. New Option Opportunity
+
+Notify when the AI system identifies a new option opportunity.
+   New Option Opportunity [ ON/OFF ]
+
+Example:
+    New Option Opportunity
+   NIFTY XXXXX CE
+   Signal: BUY
+
+16. Market Alert
+
+General important market alerts.
+   Market Alert [ ON/OFF ]
+
+Examples:
+        · Major index movement
+        · Unusual market volatility
+        · Major market event
+        · Significant market condition
+
+17. Important News
+
+Notify when the News Intelligence system identifies highly relevant market news.
+   Important News [ ON/OFF ]
+
+Example:
+    Important News
+   Major news detected for XXXXX.
+
+                                                                         8
+18. Major Company News
+
+Notify when significant company-specific news is detected.
+   Major Company News [ ON/OFF ]
+
+The notification should contain:
+        · Company
+        · Short headline
+        · News impact classification
+
+19. Bullish News
+
+Notify when the AI pipeline classifies relevant news as bullish.
+   Bullish News [ ON/OFF ]
+
+If OFF, bullish-news notifications must not be sent.
+
+20. Bearish News
+
+Notify when the AI pipeline classifies relevant news as bearish.
+   Bearish News [ ON/OFF ]
+
+If OFF, bearish-news notifications must not be sent.
+
+21. News Analysis Completed
+
+Notify when an important news-analysis task has completed.
+   News Analysis Completed [ ON/OFF ]
+
+Example:
+
+                                                                         9
+    Analysis Completed
+   News analysis for XXXXX has been completed.
+
+22. AI Analysis Completed
+
+Notify when a requested AI analysis job is completed.
+   AI Analysis Completed [ ON/OFF ]
+
+Example:
+    AI Analysis Completed
+   Your requested analysis is ready.
+
+23. Daily Market Summary
+
+The backend may generate a daily summary.
+   Daily Market Summary [ ON/OFF ]
+
+The notification can summarize:
+        · Market movement
+        · Top stocks
+        · Top options
+        · Important news
+        · AI-generated opportunities
+
+24. Market Open Notification
+
+Optional notification:
+   Market Open [ ON/OFF ]
+
+If enabled, notify the user when the configured Indian market session begins.
+
+                                                                        10
+25. Market Close Notification
+
+Optional notification:
+   Market Close [ ON/OFF ]
+
+If enabled, notify the user when the configured market session ends.
+
+26. Notification Architecture
+
+Notifications must be controlled by the user's preferences.
+
+    EVENT
+
+    
+
+                  
+    Notification Engine
+
+    
+
+                  
+    Identify Event Type
+
+    
+
+                
+User Preference Check
+
+    
+
+
+
+                   
+
+ON                 OFF
+
+                   
+
+                      
+Send Notification  Do Nothing
+
+Important:
+If a notification type is OFF, that notification must not be delivered.
+
+27. Example -- New Trade
+
+Suppose a new trade appears at 12:15 PM.
+
+   AI Analysis
+          
+          
+
+   New Trade Detected
+
+                         11
+          
+          
+   Notification Type = NEW_TRADE
+          
+          
+   Check User Setting
+          
+           ON  Send Notification
+          
+           OFF  No Notification
+
+The trade must still appear in the Dashboard/Trades page even when notification is disabled.
+
+28. Notification Preferences Storage
+
+Notification preferences must be stored per user.
+
+Example conceptual structure:
+
+   notification_preferences
+
+   user_id
+   new_trade
+   high_confidence_trade
+   trade_update
+   target_reached
+   stop_loss_alert
+   new_stock_opportunity
+   new_option_opportunity
+   market_alert
+   important_news
+   major_company_news
+   bullish_news
+   bearish_news
+   news_analysis_completed
+   ai_analysis_completed
+   daily_market_summary
+   market_open
+   market_close
+
+Each field should be a Boolean value.
+
+Example:
+
+   new_trade = true
+   target_reached = true
+
+                                                                        12
+   bearish_news = false
+   market_open = false
+
+29. Push Notification System
+
+The notification system must be designed for mobile push notifications.
+
+Architecture:
+
+   VARUN TEJ BACKEND
+                 
+                 
+
+   Notification Engine
+                 
+                 
+
+   Check User Preferences
+                 
+                 
+
+   Push Notification Provider
+                 
+                 
+
+   Android / iOS
+                 
+                 
+
+   USER PHONE
+
+The application should request notification permission appropriately.
+
+If notification permission is denied at the operating-system level, the application must clearly explain
+that system permission must be enabled for push notifications to appear.
+
+30. Notification History
+
+Create a notification history/inbox inside the application.
+
+Example:
+
+   NOTIFICATIONS
+
+   Today
+
+    New Trade
+   NIFTY XXXXX CE
+
+                                                                        13
+    Important News
+   XXXXX company news detected.
+    Target Reached
+   XXXXX reached target.
+   Yesterday
+    AI Analysis Completed
+   Analysis completed.
+The user should be able to mark notifications as read.
+
+31. Notification Badge
+
+If unread notifications exist, the profile/notification icon can display a badge.
+Example:
+
+    3
+When all notifications are read:
+
+   
+
+32. AI API Keys Settings
+
+The Settings page must contain:
+AI API Keys
+When opened:
+
+   SETTINGS
+          
+          
+
+   AI API KEYS
+There must be three separate AI work sections.
+
+                                                                        14
+AI WORK 1
+News Intelligence
+
+AI WORK 2
+Market Impact Analysis
+
+AI WORK 3
+Final Trading Intelligence
+
+33. AI Work 1 -- API Keys
+
+Allow up to 10 API keys.
+
+AI WORK 1
+News Intelligence
+
+API Key 01  [ ******** ] [ON]
+API Key 02  [ ******** ] [ON]
+API Key 03  [ ******** ] [ON]
+API Key 04  [ ******** ] [ON]
+API Key 05  [ ******** ] [ON]
+API Key 06  [ ******** ] [ON]
+API Key 07  [ ******** ] [ON]
+API Key 08  [ ******** ] [ON]
+API Key 09  [ ******** ] [ON]
+API Key 10  [ ******** ] [ON]
+
+[ SAVE ]
+
+34. AI Work 2 -- API Keys
+
+   AI WORK 2
+   Market Impact Analysis
+
+   API Key 01
+   API Key 02
+   API Key 03
+   API Key 04
+   API Key 05
+   API Key 06
+   API Key 07
+   API Key 08
+   API Key 09
+
+                                                                        15
+   API Key 10
+
+   [ SAVE ]
+
+35. AI Work 3 -- API Keys
+
+   AI WORK 3
+   Final Trading Intelligence
+
+   API Key 01
+   API Key 02
+   API Key 03
+   API Key 04
+   API Key 05
+   API Key 06
+   API Key 07
+   API Key 08
+   API Key 09
+   API Key 10
+
+   [ SAVE ]
+
+36. AI Key Rotation
+
+The backend must automatically use the configured keys sequentially when a provider returns a quota/
+rate-limit or temporary availability error.
+
+Example:
+
+   KEY 01
+      
+       Available  Use
+      
+       Rate/Quota Error
+                     
+                     
+                KEY 02
+                     
+                      ...
+                                  
+                                  
+                              KEY 10
+
+                                                                        16
+The system must maintain usage/error state per key.
+Do not simply rotate keys for every request.
+A healthy key should remain active until a provider error/quota condition requires switching.
+The key manager must respect the provider's terms, rate limits, and quota policies.
+
+37. API Key Security
+
+API keys must never be displayed as plain text after they are stored unless explicitly requested for
+editing.
+Use:
+
+   ***************
+
+instead of:
+
+   actual-api-key
+
+The backend must encrypt/protect sensitive secrets appropriately.
+Do not:
+
+        · Hard-code API keys in Flutter source code.
+        · Commit API keys to Git.
+        · Store API keys in public configuration files.
+        · Return full API keys through normal API responses.
+        · Log API keys.
+
+38. API Key Status
+
+Each key should have a status.
+Possible states:
+
+   ACTIVE
+   RATE LIMITED
+   QUOTA EXCEEDED
+   INVALID
+
+                                                                        17
+   DISABLED
+   UNKNOWN
+
+Example:
+
+API Key 01   ACTIVE
+API Key 02   RATE LIMITED
+API Key 03   ACTIVE
+API Key 04   INVALID
+
+This helps the user understand why a key is not being used.
+
+39. API Key Testing
+
+Each API key entry should provide an optional:
+
+Test Key
+
+button.
+
+Flow:
+
+   TEST KEY
+        
+        
+
+   Backend
+        
+        
+
+   Provider API
+        
+        
+
+   Result
+
+Possible results:
+
+    API Key Working
+
+    Rate Limited
+
+    Quota Exceeded
+
+    Invalid API Key
+
+                                                18
+40. Profile  Settings Navigation
+
+Final navigation:
+
+DASHBOARD
+
+
+
+       
+PROFILE PICTURE
+
+
+
+       
+PROFILE
+
+
+ Edit Profile Picture
+
+
+ Edit Name
+
+
+ Edit Username
+
+
+ Security
+
+
+ Settings
+
+           
+
+            Notifications
+
+           
+
+            AI API Keys
+
+           
+
+            Security
+
+           
+
+            Appearance
+
+           
+
+            Account
+
+
+ Logout
+
+41. Final Settings Architecture
+
+                      SETTINGS
+
+                         
+
+           
+
+                                       
+
+                                            
+NOTIFICATIONS         AI API KEYS      SECURITY
+
+                                       
+
+                                       
+
+                                       
+
+                                   19
+                                            
+
+                    WORK1 WORK2 WORK3       
+
+                                            
+
+                    10        10    10      
+
+                    KEYS KEYS KEYS          
+
+                                            
+
+           
+
+                              
+
+                                 
+                        APPEARANCE
+
+42. Complete Feature Flow
+
+APP OPEN
+
+
+
+     
+WELCOME MAMILLAPALLI VARUN TEJ
+
+
+
+     
+PIN / FINGERPRINT
+
+
+
+     
+DASHBOARD
+
+
+ Live NIFTY
+ Live SENSEX
+ Top Stock Gainers
+ Top Option Gainers
+ Trades
+ Stocks
+ Options
+
+             
+
+           
+  PROFILE PICTURE
+
+             
+
+                
+           PROFILE
+
+             
+
+  
+
+                       
+  EDIT              SETTINGS
+
+PROFILE             
+
+             
+
+                                  
+
+  Notifications AI Keys Security
+
+                        
+
+               
+
+                                        20
+                 
+Work1  Work2  Work3
+
+                 
+ 10     10     10
+Keys   Keys   Keys
+
+43. Implementation Rules
+
+The coding agent must:
+
+      1. Keep this module separate from Authentication logic.
+      2. Keep this module integrated with the existing Dashboard.
+      3. Use reusable notification models.
+      4. Store notification preferences per user.
+      5. Implement individual ON/OFF controls.
+      6. Persist notification settings.
+      7. Implement push-notification architecture.
+      8. Implement notification history.
+      9. Implement Profile editing.
+     10. Enforce unique usernames on the backend.
+     11. Implement Settings navigation.
+     12. Implement the three AI API-key sections.
+     13. Support 10 keys per AI work.
+     14. Support a total of 30 configurable AI API keys.
+     15. Implement automatic key rotation on provider quota/rate errors.
+     16. Protect all API keys and secrets.
+     17. Never hard-code production credentials.
+     18. Keep Light/Dark/System appearance support.
+     19. Preserve the existing VARUN TEJ Dashboard.
+     20. Do not add unnecessary financial modules.
+     21. Do not implement automatic trade execution.
+     22. Do not guarantee AI-generated profits.
+     23. Use proper loading, success, error, and empty states.
+     24. Ensure the implementation is production-ready and null-safe.
+     25. Keep the architecture modular and maintainable.
+
+44. Final Module Structure
+
+The completed application should conceptually contain:
+
+   VARUN TEJ
+   
+    Authentication
+   
+    Dashboard
+
+                                                                        21
+  Live Market
+  Top Stock Gainers
+  Top Option Gainers
+  Trades
+  Stocks
+  Options
+
+ Profile
+  Profile Picture
+  Name
+  Username
+
+ Settings
+  Notifications
+   New Trade
+   High-Confidence Trade
+   Trade Update
+   Target Reached
+   Stop Loss Alert
+   New Stock Opportunity
+   New Option Opportunity
+   Market Alert
+   Important News
+   Major Company News
+   Bullish News
+   Bearish News
+   News Analysis Completed
+   AI Analysis Completed
+   Daily Market Summary
+   Market Open
+   Market Close
+ 
+  AI API Keys
+   AI Work 1 -- 10 Keys
+   AI Work 2 -- 10 Keys
+   AI Work 3 -- 10 Keys
+ 
+  Security
+  Appearance
+  Account
+
+ Backend
+
+        Authentication
+        Market Data
+        News
+        AI Orchestration
+        API Key Manager
+        Notification Engine
+        Push Notifications
+
+                                                                    22
+           User Preferences
+           Database
+
+45. Final Requirement
+
+Implement this entire Profile + Settings + Notifications + AI API Key Management module into the
+existing VARUN TEJ project.
+Do not recreate the previously completed Authentication system.
+Do not redesign the previously defined Dashboard.
+Add this module as a clean continuation.
+Every notification type must have its own independent ON/OFF control.
+If a user disables a notification type, the backend must respect that preference and must not send that
+notification type to the user's device.
+The user must be able to manage their profile, notification preferences, security settings, appearance,
+and all three AI API-key pools from the Settings/Profile system.
+The final UI must maintain the same professional VARUN TEJ visual language across the entire
+application.
+
+                                                                        23
+           VARUN TEJ
+
+AI Model Add & API Key Verification -- Complete UI Specification
+
+Add AI Model                                     Add AISMaveodel                                      Add AISMaveodel
+
+AI Provider                                      AI Provider                                          AI Provider
+  Google Gemini                                    Google Gemini                                        Google Gemini
+
+Model                                            Model                                                Model
+  Gemini 2.5 Flash                                 Gemini 2.5 Flash                                     Gemini 2.5 Flash
+
+API Key                                          API Key                                              API Key
+  ················                                 ················                                     ················
+                                                                                      VERIFY API KEY                                       VERIFY API KEY
+                    VERIFY API KEY                  API KEY VERIFIED                                    ! VERIFICATION FAILED
+                                                   Model is reachable and ready.                        Invalid / expired key or
+Security: key is stored encrypted                  Response test: successful                            provider rejected the request.
+and never shown in full.
+
+  Document scope
+  Purpose: Ee document lo AI model ni app lo add chesetappudu page ela undali, API key verification ela work
+  avvali, success/failure states ela display avvali, security, validation, edit/remove, testing, and complete user flow
+  anni define chestunnam.
+
+Important: UI lo real API keys ni example/demo screenshots lo expose cheyyakudadhu. Masked value (········)
+matrame display cheyyali.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                                          Page 1
+1. AI Model Management -- Main Page
+
+User app settings lo AI Models open chesinappudu first screen model list/dashboard laga undali.
+
+AI Models  Configured                            + Add AI                                        Model
+   Page      Models                               Model                                          Details
+
+Main page lo ee sections undali:
+
+· Header: Back arrow + "AI Models" title + optional search/filter icon.
+· Active model card: Provider, model name, status badge, last verified time.
+· Status badge: Connected / Verification Required / Failed / Disabled.
+· Primary action: "+ Add AI Model" button.
+· Secondary actions: Test Connection, Edit, Set as Primary, Disable, Remove.
+· Security note: "API keys are encrypted and never displayed in full."
+
+  UX priority
+  Design rule: User ki API key value kanna model status important ga kanipinchali. Full secret ni e screen lo kuda
+  plain text ga persist/display cheyyakudadhu.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                           Page 2
+2. Add AI Model -- Complete Page Layout
+
+User + Add AI Model tap chesinappudu ee form open avvali.
+
+Order  Field / Component          Required       Behavior
+1      AI Provider                Yes            Dropdown / searchable provider list
+2      Model Name                 Yes            Provider-specific model list or manual entry
+3      API Key                    Yes            Password-style masked input + show/hide icon
+4      Base URL / Endpoint        Depends        Auto-filled for standard providers; editable when needed
+5      Organization / Project ID  Depends        Shown only if provider requires it
+6      Verification               Yes            Verify API Key / Test Connection
+7      Save Model                 After verify   Enabled only after successful validation
+
+Recommended visual order
+
+ Provider     Model                              API Key  Verify                                           Save
+Dropdown   Dropdown                              Masked   Button                                           Model
+
+Buttons: Back/Cancel on left or top; Verify API Key as the main action; Save Model disabled until verification
+succeeds.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                                   Page 3
+3. API Key Input -- Exact UX Behavior
+
+API key field secure input laga behave avvali.
+· Default: Placeholder "Enter API key". Empty field lo Verify disabled.
+· Typing: Characters masked. Example: ················.
+· Show icon: Temporary reveal only while user explicitly taps/holds it, if supported.
+· Validation: Trim leading/trailing spaces; reject empty value; provider-specific format checks where reliable.
+· Paste: Allow paste, but never log the key.
+· Error: Inline error under field, e.g. "API key is required."
+· Security: Key must not appear in analytics events, crash logs, debug logs, URL query parameters, or UI screenshots
+generated by the app.
+
+Field state examples
+
+State         Visual                              Message
+                                                  Enter API key
+Empty         Neutral border                      Key remains masked
+                                                  Ready to verify
+Typing        Focused border                      API key format/value is invalid
+                                                  Verifying connection...
+Valid format  Normal / subtle positive indicator  API key verified
+
+Invalid       Red border
+
+Verifying     Loading indicator
+
+Verified      Green border/check
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                    Page 4
+4. Verification Flow -- Success & Failure
+
+Verify button press chesinappudu backend/provider connection test cheyyali. UI immediate ga loading state ki vellali.
+
+      User taps      Validate                             Secure              Provider  Success /
+       VERIFY          Form                            API Request           Response     Failure
+
+Verification states
+
+State            Screen behavior                                             User action
+                                                                             Tap Verify
+Idle             Verify button enabled only when required fields are valid.  Wait
+                                                                             Save Model
+Loading          Button disabled + spinner + "Verifying connection..."       Fix key / Retry
+                                                                             Retry / Check endpoint
+Success          Green success card + verified timestamp + Save enabled.     Wait / Retry later
+
+Failure          Red failure card + reason + Retry button.
+
+Timeout          Amber warning + "Request timed out."
+
+Rate limited     Amber/red warning + "Provider rate limit reached."
+
+Success screen mockup
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                      Page 5
+Add AI Model                                         Save
+
+AI Provider
+  Google Gemini
+
+Model
+  Gemini 2.5 Flash
+
+API Key
+  ················
+                                     VERIFY API KEY
+   API KEY VERIFIED
+  Model is reachable and ready.
+  Response test: successful
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION            Page 6
+5. Verification Failed -- Detailed Error UX
+
+Verification fail ayithe generic "Error" ani matrame chupinchakudadhu. User next step understand chesukune laga
+reason + action ivvali.
+
+Failure type       Primary message                                           Action
+
+Invalid key        API key is invalid or rejected by the provider.           Re-enter key
+
+Expired / revoked  This API key is no longer active.                         Create/replace key
+
+Unauthorized       The provider rejected authentication.                     Check key / project
+
+Model unavailable  Selected model is not available for this key/project.     Choose another model
+
+Quota exceeded     Provider quota/rate limit has been reached.               Retry later / use another model
+
+Network            Unable to reach the AI provider.                          Check internet / endpoint
+
+Timeout            The provider did not respond in time.                     Retry
+
+Server error       The AI provider returned a temporary server error.        Retry later
+
+Failure screen mockup                                                  Save
+
+            Add AI Model
+
+                   AI Provider
+                     Google Gemini
+
+                   Model
+                     Gemini 2.5 Flash
+
+                   API Key
+                     ················
+                                                       VERIFY API KEY
+                    ! VERIFICATION FAILED
+                        Invalid / expired key or
+                        provider rejected the request.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                                  Page 7
+Security rule
+Important: Error message lo provider nundi vachina sensitive response body, raw token, request headers, or
+secret data ni directly show cheyyakudadhu. User-friendly sanitized message matrame show cheyyali.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                             Page 8
+6. After Successful Save -- Model Card
+
+Save Model successful ayyaka user Add page nundi Model Details/List page ki return avvali.
+
+GOOGLE GEMINI     CONNECTED                      PRIMARY
+Gemini 2.5 Flash  Last verified: Today, 5:37 PM  AI Brain
+
+API Key           Connection                     Actions
+··············42  Healthy                        Test · Edit · Disable · Remove
+
+Actions behavior
+
+· Test Connection: Existing stored key ni use chesi fresh verification run cheyyali.
+· Edit: Provider/model change allowed; existing secret should remain masked. Key change optional.
+· Set as Primary: Selected model becomes default AI provider/model for the app.
+· Disable: Model remains saved but cannot be used by AI requests.
+· Remove: Confirmation dialog required; remove encrypted secret and configuration.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                    Page 9
+7. Complete User Journey
+
+AI Models       + Add AI                         Choose       Enter Key    Verify
+                 Model                           Provider
+
+Provider          Show                             Save       Save Model   Connected
+Accepts         Success                          Enabled                       Card
+
+Failure branch
+
+Verify          Provider                         Show Reason  Retry / Fix  Verify Again
+                Rejects
+
+State consistency
+Rule: Verification success lekunda model ni "Connected" or "Healthy" status lo show cheyyakudadhu. Save button
+kuda successful verification tarvata matrame enable cheyyadam safest UX.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                    Page 10
+8. API Key Security Requirements
+
+AI model integration lo key security UI design kanna important. Ee rules mandatory ga follow cheyyali.
+1. Never store API key in plain text in local preferences, SharedPreferences, SQLite, or normal JSON config.
+2. Use secure platform storage / encrypted secret storage appropriate to the target platform.
+3. Never print API keys in console logs, debug logs, crash reports, analytics, or telemetry.
+4. Never send API key from the mobile UI directly to third-party systems except the intended provider request path.
+5. Prefer backend-mediated provider calls when the architecture requires stronger secret protection.
+6. Never place secret keys in source code, Git, screenshots, README files, or public build artifacts.
+7. API key field must always be masked by default.
+8. When editing an existing model, show only a masked indicator; do not retrieve and display the full secret.
+9. Remove flow must delete the encrypted secret and related model configuration.
+10. Verification response should store only safe metadata: verified status, provider/model, timestamp, latency, and
+sanitized error category.
+
+Safe data model concept
+
+Store: provider, modelName, endpoint, status, verifiedAt, lastErrorCategory, latencyMs, secretReference.
+Do not store/display in normal app state: raw API key.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION  Page 11
+9. Form Validation Rules
+
+Field        Validation
+Provider     Required; must be one of supported providers.
+Model        Required; must be compatible with provider or explicitly allowed as custom model.
+API Key      Required; trim whitespace; provider-specific validation where possible.
+Endpoint     If custom endpoint is allowed, require valid HTTPS URL in production.
+Project/Org  Required only for providers that need it.
+Verify       Blocked while required fields are invalid or request is in progress.
+Save         Blocked until verification success, unless explicitly supporting offline draft mode.
+
+Loading behavior
+
+· Verify button text changes to "Verifying..." and spinner appears.
+· All credential fields become temporarily disabled during verification.
+· Prevent duplicate verification requests from repeated taps.
+· On success, show a clear green state and enable Save.
+· On failure, restore the form and keep the entered key masked so the user can retry.
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                    Page 12
+10. Required UI State Checklist
+
+#   State                                        Required behavior
+                                                 No values entered; Verify and Save disabled.
+01  Initial Add Screen                           Model options update according to provider.
+                                                 Key masked; Verify becomes available when valid.
+02  Provider Selected                            Spinner + disabled form + "Verifying connection...".
+                                                 Green success card + verified metadata + Save enabled.
+03  API Key Entered                              Red error card + sanitized reason + Retry.
+                                                 Amber warning + Retry.
+04  Verifying                                    Clear provider-limit message + retry guidance.
+                                                 Model card shows Connected status.
+05  Verification Success                         Secret remains masked; user can replace it.
+                                                 Model saved but not selected for AI requests.
+06  Verification Failed                          Explicit confirmation before deleting model + secret.
+
+07  Timeout
+
+08  Quota / Rate Limit
+
+09  Saved / Connected
+
+10  Edit Existing
+
+11  Disabled
+
+12  Remove Confirmation
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION                                                          Page 13
+11. Final Screen Specification -- Implementation Ready
+
+Coding agent ki handover cheyyadaniki final expected behavior:
+· Page title: Add AI Model.
+· Provider: Searchable dropdown with supported AI providers.
+· Model: Provider-dependent model selector.
+· API Key: Secure masked field with visibility control.
+· Optional configuration: Endpoint / Project / Organization only when required.
+· Primary verification CTA: Verify API Key / Test Connection.
+· Success: Green "API KEY VERIFIED" state, safe metadata, Save enabled.
+· Failure: Red "VERIFICATION FAILED" state, sanitized reason, Retry.
+· Loading: Spinner, duplicate-click protection, disabled inputs.
+· Save: Only after successful verification.
+· Saved model: Connected/Failed/Disabled status card with actions.
+· Security: Never expose or log the complete API key.
+· Responsive: Mobile-first layout; all cards and messages must fit without horizontal scrolling.
+· Accessibility: Labels, readable contrast, large tap targets, screen-reader-friendly field names.
+
+  Final acceptance flow
+  Expected user experience: User  Add AI Model  Select Provider  Select Model  Enter API Key  Verify
+   Success/Failure  Save  Connected Model Card. Failure ayithe clear reason + retry path undali; success
+  ayithe only then model usable/primary ga set cheyyali.
+
+End of specification
+
+VARUN TEJ · AI MODEL / API KEY UI SPECIFICATION  Page 14
+
