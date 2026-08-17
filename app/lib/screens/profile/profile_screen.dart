@@ -239,7 +239,10 @@ class ProfileScreen extends StatelessWidget {
                 if (name.isEmpty) return;
                 final available = await ProfileApi.usernameAvailable(name);
                 setState(() => feedback = available ? 'Username available' : 'Username already exists');
-                if (available) Navigator.pop(c, name);
+                if (!c.mounted) return;
+                if (available) {
+                  Navigator.pop(c, name);
+                }
               },
               child: const Text('SAVE'),
             ),
@@ -257,6 +260,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
+    final session = context.read<SessionProvider>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -273,7 +277,6 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
     if (confirmed != true) return;
-    final session = context.read<SessionProvider>();
     await session.logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

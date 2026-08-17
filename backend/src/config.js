@@ -7,7 +7,9 @@ module.exports = {
   port: int(process.env.PORT, 8080),
   jwtSecret: process.env.JWT_SECRET || 'dev-insecure-secret-change-me',
   encryptionKey: process.env.ENCRYPTION_KEY || 'dev-insecure-encryption-key',
-  databaseUrl: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/varuntej',
+  // MongoDB (Atlas) connection string; the app stores data in the database named by mongoDbName.
+  databaseUrl: process.env.DATABASE_URL || 'mongodb://127.0.0.1:27017/varuntej',
+  mongoDbName: process.env.MONGO_DB_NAME || 'varuntej',
 
   // Angel One
   angelone: {

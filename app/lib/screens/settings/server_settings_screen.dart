@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../core/config.dart';
 import '../../providers/providers.dart';
-import '../../services/api_client.dart';
 import '../../services/api_services.dart';
 import '../../widgets/common.dart';
 
@@ -21,11 +20,11 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
 
   Future<void> _save() async {
     final url = controller.text.trim();
+    final session = context.read<SessionProvider>();
     setState(() => saving = true);
     try {
       await ApiClient.setServerUrl(url);
       await ProfileApi.saveSettings(serverUrl: ApiClient.baseUrl);
-      final session = context.read<SessionProvider>();
       await session.resolveSession();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Server URL updated')));

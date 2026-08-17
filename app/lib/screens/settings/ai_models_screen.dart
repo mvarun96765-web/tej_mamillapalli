@@ -30,15 +30,19 @@ class _AiModelsScreenState extends State<AiModelsScreen> {
     });
     try {
       final r = await AiApi.models();
-      if (mounted) setState(() {
-        models = (r['models'] as List? ?? []).map((e) => AiModel.fromJson(e as Map<String, dynamic>)).toList();
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          models = (r['models'] as List? ?? []).map((e) => AiModel.fromJson(e as Map<String, dynamic>)).toList();
+          loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        error = e is ApiException ? e.message : 'Failed to load models';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e is ApiException ? e.message : 'Failed to load models';
+          loading = false;
+        });
+      }
     }
   }
 

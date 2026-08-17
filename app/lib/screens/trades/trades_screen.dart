@@ -30,15 +30,19 @@ class _TradesScreenState extends State<TradesScreen> {
     });
     try {
       final t = await AiApi.trades();
-      if (mounted) setState(() {
-        trades = t;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          trades = t;
+          loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        error = e is ApiException ? e.message : 'Failed to load trades';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e is ApiException ? e.message : 'Failed to load trades';
+          loading = false;
+        });
+      }
     }
   }
 

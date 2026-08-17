@@ -30,15 +30,19 @@ class _OptionsScreenState extends State<OptionsScreen> {
     });
     try {
       final a = await AiApi.analyses(kind: 'option');
-      if (mounted) setState(() {
-        analyses = a;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          analyses = a;
+          loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        error = e is ApiException ? e.message : 'Failed to load options';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e is ApiException ? e.message : 'Failed to load options';
+          loading = false;
+        });
+      }
     }
   }
 

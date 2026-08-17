@@ -28,7 +28,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
               title: Text('System'),
               value: ThemeMode.system,
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(20),
               child: Text(
                 'The welcome screen keeps its dedicated opening treatment; the rest of the app follows the selected theme.',

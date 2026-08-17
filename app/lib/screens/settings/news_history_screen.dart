@@ -33,15 +33,19 @@ class _NewsHistoryScreenState extends State<NewsHistoryScreen> {
     });
     try {
       final h = await NewsApi.history();
-      if (mounted) setState(() {
-        history = h;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          history = h;
+          loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        error = e is ApiException ? e.message : 'Failed to load news history';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e is ApiException ? e.message : 'Failed to load news history';
+          loading = false;
+        });
+      }
     }
   }
 

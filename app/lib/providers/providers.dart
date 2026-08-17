@@ -6,7 +6,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
-import '../services/api_client.dart';
 import '../services/api_services.dart';
 
 enum SessionState { starting, unauthenticated, authenticated }

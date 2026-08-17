@@ -43,10 +43,12 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
   Future<void> _load() async {
     try {
       final p = await NotificationApi.preferences();
-      if (mounted) setState(() {
-        prefs = p;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          prefs = p;
+          loading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => loading = false);
     }

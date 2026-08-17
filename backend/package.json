@@ -17,8 +17,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.5.0",
     "otplib": "^12.0.1",
-    "pg": "^8.23.0",
     "smartapi-javascript": "^1.0.23"
   }
 }

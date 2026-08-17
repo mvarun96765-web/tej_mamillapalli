@@ -91,10 +91,12 @@ class _DashboardTabState extends State<_DashboardTab> {
   Future<void> _loadTrades() async {
     try {
       final trades = await AiApi.trades();
-      if (mounted) setState(() {
-        _trades = trades.take(5).toList();
-        _tradesLoaded = true;
-      });
+      if (mounted) {
+        setState(() {
+          _trades = trades.take(5).toList();
+          _tradesLoaded = true;
+        });
+      }
     } catch (_) {}
   }
 
@@ -203,8 +205,8 @@ class _DashboardTabState extends State<_DashboardTab> {
                   IndexCard(name: 'NIFTY', quote: market.indices?.nifty ?? const Quote()),
                   const SizedBox(width: 10),
                   IndexCard(
-                    name: market.indices?.sensex?.error != null ? 'BANKNIFTY' : 'SENSEX',
-                    quote: market.indices?.sensex?.error != null ? (market.indices?.banknifty ?? const Quote()) : (market.indices?.sensex ?? const Quote()),
+                    name: market.indices?.sensex.error != null ? 'BANKNIFTY' : 'SENSEX',
+                    quote: market.indices?.sensex.error != null ? (market.indices?.banknifty ?? const Quote()) : (market.indices?.sensex ?? const Quote()),
                   ),
                 ],
               ),

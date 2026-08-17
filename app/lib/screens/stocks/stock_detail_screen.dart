@@ -48,10 +48,12 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
   }
 
   Future<void> _loadMarket({bool silent = false}) async {
-    if (!silent) setState(() {
-      marketLoading = true;
-      marketError = null;
-    });
+    if (!silent) {
+      setState(() {
+        marketLoading = true;
+        marketError = null;
+      });
+    }
     try {
       final results = await Future.wait([
         MarketApi.details(symbol: widget.symbol, kind: 'stock'),

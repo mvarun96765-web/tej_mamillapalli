@@ -35,16 +35,20 @@ class _TradePerformanceScreenState extends State<TradePerformanceScreen> {
     try {
       final p = await AiApi.tradePerformance();
       final h = await AiApi.tradeHistory();
-      if (mounted) setState(() {
-        performance = p;
-        history = h;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          performance = p;
+          history = h;
+          loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        error = e is ApiException ? e.message : 'Failed to load trade performance';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e is ApiException ? e.message : 'Failed to load trade performance';
+          loading = false;
+        });
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-/// Shared data models for the VARUN TEJ app. All values come from the backend.
+// Shared data models for the VARUN TEJ app. All values come from the backend.
 
 class User {
   final int id;

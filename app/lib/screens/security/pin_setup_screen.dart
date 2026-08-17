@@ -74,11 +74,12 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   }
 
   Future<void> _save(String value) async {
+    final session = context.read<SessionProvider>();
     setState(() => saving = true);
     try {
       await ProfileApi.savePin(value);
       if (enableBiometric) await ProfileApi.setBiometric(true);
-      await context.read<SessionProvider>().refreshUser();
+      await session.refreshUser();
       setState(() => done = true);
     } on ApiException catch (e) {
       setState(() => error = e.message);
@@ -112,7 +113,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                       onPressed: () async {
                         final session = context.read<SessionProvider>();
                         await session.setUnlocked(true);
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(builder: (_) => const DashboardScreen()),
                           (route) => false,

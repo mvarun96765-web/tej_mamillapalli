@@ -30,15 +30,19 @@ class _StocksScreenState extends State<StocksScreen> {
     });
     try {
       final a = await AiApi.analyses(kind: 'stock');
-      if (mounted) setState(() {
-        analyses = a;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          analyses = a;
+          loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        error = e is ApiException ? e.message : 'Failed to load stocks';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e is ApiException ? e.message : 'Failed to load stocks';
+          loading = false;
+        });
+      }
     }
   }
 

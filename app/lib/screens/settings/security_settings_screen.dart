@@ -26,6 +26,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   Future<void> _setBiometric(bool value) async {
+    final session = context.read<SessionProvider>();
     try {
       if (value) {
         await _auth.authenticate(
@@ -34,7 +35,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         );
       }
       await ProfileApi.setBiometric(value);
-      await context.read<SessionProvider>().refreshUser();
+      await session.refreshUser();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(value ? 'Biometric unlock enabled' : 'Biometric unlock disabled')),
