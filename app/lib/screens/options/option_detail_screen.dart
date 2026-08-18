@@ -23,6 +23,7 @@ class _OptionDetailScreenState extends State<OptionDetailScreen> {
   AnalysisJob? job;
   Timer? _poll;
   Timer? _quoteTimer;
+  Timer? _candleTimer;
 
   // Live market data
   InstrumentDetails? details;
@@ -33,18 +34,24 @@ class _OptionDetailScreenState extends State<OptionDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMarket();
-    _quoteTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadMarket(silent: true));
+    _loadQuote();
+    _loadCandles();
+    // Live price ticks every 5s; the 120-day candle history refreshes hourly.
+    _quoteTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadQuote(silent: true));
+    _candleTimer = Timer.periodic(const Duration(minutes: 1), (_) => _loadCandles(silent: true));
   }
 
   @override
   void dispose() {
     _poll?.cancel();
     _quoteTimer?.cancel();
+    _candleTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadMarket({bool silent = false}) async {
+  Future<void> _refresh() => Future.wait([_loadQuote(), _loadCandles()]);
+
+  Future<void> _loadQuote({bool silent = false}) async {
     if (!silent) {
       setState(() {
         marketLoading = true;
@@ -52,14 +59,10 @@ class _OptionDetailScreenState extends State<OptionDetailScreen> {
       });
     }
     try {
-      final results = await Future.wait([
-        MarketApi.details(symbol: widget.symbol, kind: 'option'),
-        MarketApi.candles(symbol: widget.symbol, kind: 'option', days: 120),
-      ]);
+      final d = await MarketApi.details(symbol: widget.symbol, kind: 'option');
       if (!mounted) return;
       setState(() {
-        details = results[0] as InstrumentDetails;
-        candles = results[1] as List<Candle>;
+        details = d;
         marketLoading = false;
         marketError = null;
       });
@@ -70,6 +73,14 @@ class _OptionDetailScreenState extends State<OptionDetailScreen> {
         marketLoading = false;
       });
     }
+  }
+
+  Future<void> _loadCandles({bool silent = false}) async {
+    try {
+      final list = await MarketApi.candles(symbol: widget.symbol, kind: 'option', days: 120);
+      if (!mounted) return;
+      setState(() => candles = list);
+    } catch (_) {}
   }
 
   Future<void> _analyze() async {
@@ -107,7 +118,7 @@ class _OptionDetailScreenState extends State<OptionDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('OPTION')),
       body: RefreshIndicator(
-        onRefresh: () => _loadMarket(),
+        onRefresh: _refresh,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -122,7 +133,7 @@ class _OptionDetailScreenState extends State<OptionDetailScreen> {
                     const SizedBox(height: 8),
                     Text(marketError!, textAlign: TextAlign.center),
                     const SizedBox(height: 10),
-                    OutlinedButton(onPressed: _loadMarket, child: const Text('Retry')),
+                    OutlinedButton(onPressed: _refresh, child: const Text('Retry')),
                   ]),
                 ),
               )

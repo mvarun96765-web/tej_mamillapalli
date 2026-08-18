@@ -714,6 +714,18 @@ async function getTopOptionGainers(limit = 10) {
   return getOptionMovers(limit, true);
 }
 
+/** Persist a resolved NSE token so later detail loads are instant. */
+async function rememberScrip(symbol, token) {
+  try {
+    await db.prepare(
+      `INSERT INTO scrips (symbol, token, exchange, ts) VALUES (?, ?, ?, ?)
+       ON CONFLICT (symbol) DO UPDATE SET token = EXCLUDED.token, exchange = EXCLUDED.exchange, ts = EXCLUDED.ts`
+    ).run(symbol, token, 'NSE', Date.now());
+    tokenBySymbol.set(symbol, token);
+    symbolByToken.set(token, symbol);
+  } catch (_) {}
+}
+
 async function searchInstruments(query) {
   const q = String(query || '').trim().toUpperCase();
   if (!q) return [];
@@ -727,22 +739,52 @@ async function searchInstruments(query) {
     return [{ type: 'index', ...idx }];
   }
 
+  // "NIFTY 26000 CE" style -> resolve the exact contract.
   const optionRe = new RegExp(`^(${UNDERLYING_RE})\\s+(\\d+)\\s+(CE|PE)$`, 'i');
   const m = q.match(optionRe);
-  let optionMatches = [];
   if (m) {
     const u = m[1].toUpperCase();
     const meta = OPTION_UNDERLYINGS.find((x) => x.symbol === u);
-    optionMatches = [{ type: 'option', symbol: `${u} ${m[2]} ${m[3].toUpperCase()}`, token: '', exchange: (meta && meta.exchange) || 'NFO' }];
+    return [{ type: 'option', symbol: `${u} ${m[2]} ${m[3].toUpperCase()}`, token: '', exchange: (meta && meta.exchange) || 'NFO' }];
   }
 
-  await resolveCatalogTokens();
-  const stockMatches = CATALOG_SYMBOLS
-    .filter((s) => s.includes(q))
-    .slice(0, 25)
-    .map((symbol) => ({ type: 'stock', symbol, token: cachedToken(symbol) || '', exchange: 'NSE' }));
+  // Live exchange search: NSE stocks (SYMBOL-EQ) + NFO contracts (CE/PE/FUT)
+  // for ANY symbol, not just the hardcoded catalog (e.g. SUZLON).
+  const results = [];
+  const seen = new Set();
 
-  return [...optionMatches, ...stockMatches].slice(0, 25);
+  const nseRows = await searchScrip('NSE', q);
+  for (const r of nseRows) {
+    const ts = String(r.tradingsymbol || r.symbol || '').toUpperCase();
+    const eq = ts.match(/^([A-Z0-9-]+)-EQ$/);
+    if (!eq || !r.symboltoken) continue;
+    const base = eq[1];
+    if (seen.has(`s:${base}`)) continue;
+    seen.add(`s:${base}`);
+    results.push({ type: 'stock', symbol: base, token: String(r.symboltoken), exchange: 'NSE' });
+    await rememberScrip(base, String(r.symboltoken));
+    if (results.length >= 25) return results;
+  }
+
+  const nfoRows = await searchScrip('NFO', q);
+  for (const r of nfoRows) {
+    const ts = String(r.tradingsymbol || r.symbol || '').toUpperCase();
+    const opt = ts.match(/^([A-Z0-9]+)(\\d{2}[A-Z]{3}\\d{2})(\\d+)(CE|PE)$/);
+    if (!opt || !r.symboltoken) continue;
+    const [full, underlying, , strike, optType] = opt;
+    const key = `o:${underlying}:${strike}:${optType}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    results.push({
+      type: 'option',
+      symbol: `${underlying} ${strike} ${optType}`,
+      token: String(r.symboltoken),
+      exchange: 'NFO',
+    });
+    if (results.length >= 25) return results;
+  }
+
+  return results;
 }
 
 function getLoginStatus() {

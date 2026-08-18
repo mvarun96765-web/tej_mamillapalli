@@ -11,10 +11,10 @@ import '../../services/api_services.dart';
 import '../../widgets/common.dart';
 import '../auth/auth_screen.dart';
 import '../notifications/inbox_screen.dart';
-import '../options/options_screen.dart';
+import '../options/option_detail_screen.dart';
 import '../profile/profile_screen.dart';
 import '../search/search_screen.dart';
-import '../stocks/stocks_screen.dart';
+import '../stocks/stock_detail_screen.dart';
 import '../trades/trades_screen.dart';
 
 /// Main application shell: Dashboard tab (spec order) + quick tabs.
@@ -65,8 +65,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: const [
           _DashboardTab(),
           TradesScreen(),
-          StocksScreen(),
-          OptionsScreen(),
           ProfileScreen(),
         ],
       ),
@@ -76,8 +74,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.swap_vert), label: 'Trades'),
-          NavigationDestination(icon: Icon(Icons.business_outlined), selectedIcon: Icon(Icons.business), label: 'Stocks'),
-          NavigationDestination(icon: Icon(Icons.show_chart_outlined), selectedIcon: Icon(Icons.show_chart), label: 'Options'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
@@ -227,60 +223,40 @@ class _DashboardTabState extends State<_DashboardTab> {
             ),
           ),
           // ── TOP STOCK GAINERS ────────────────────────────────
-          SliverToBoxAdapter(
-            child: SectionHeader(
-              'TOP STOCK GAINERS',
-              trailing: TextButton(onPressed: _openStocks, child: const Text('View all')),
-            ),
-          ),
+          const SliverToBoxAdapter(child: SectionHeader('TOP STOCK GAINERS')),
           if (market.topStocks.isEmpty)
             const SliverToBoxAdapter(child: _EmptySection('No gainers right now — market may be closed.'))
           else
             SliverList.builder(
               itemCount: market.topStocks.length,
-              itemBuilder: (c, i) => GainerTile(gainer: market.topStocks[i], onTap: _openStocks),
+              itemBuilder: (c, i) => GainerTile(gainer: market.topStocks[i], onTap: () => _openInstrument(market.topStocks[i])),
             ),
           // ── TOP OPTION GAINERS ───────────────────────────────
-          SliverToBoxAdapter(
-            child: SectionHeader(
-              'TOP OPTION GAINERS',
-              trailing: TextButton(onPressed: _openOptions, child: const Text('View all')),
-            ),
-          ),
+          const SliverToBoxAdapter(child: SectionHeader('TOP OPTION GAINERS')),
           if (market.topOptions.isEmpty)
             const SliverToBoxAdapter(child: _EmptySection('No option gainers right now.'))
           else
             SliverList.builder(
               itemCount: market.topOptions.length,
-              itemBuilder: (c, i) => GainerTile(gainer: market.topOptions[i], onTap: _openOptions),
+              itemBuilder: (c, i) => GainerTile(gainer: market.topOptions[i], onTap: () => _openInstrument(market.topOptions[i])),
             ),
           // ── TOP STOCK LOSERS ───────────────────────────────────
-          SliverToBoxAdapter(
-            child: SectionHeader(
-              'TOP STOCK LOSERS',
-              trailing: TextButton(onPressed: _openStocks, child: const Text('View all')),
-            ),
-          ),
+          const SliverToBoxAdapter(child: SectionHeader('TOP STOCK LOSERS')),
           if (market.topStockLosers.isEmpty)
             const SliverToBoxAdapter(child: _EmptySection('No stock losers right now — market may be closed.'))
           else
             SliverList.builder(
               itemCount: market.topStockLosers.length,
-              itemBuilder: (c, i) => GainerTile(gainer: market.topStockLosers[i], onTap: _openStocks),
+              itemBuilder: (c, i) => GainerTile(gainer: market.topStockLosers[i], onTap: () => _openInstrument(market.topStockLosers[i])),
             ),
           // ── TOP OPTION LOSERS ──────────────────────────────────
-          SliverToBoxAdapter(
-            child: SectionHeader(
-              'TOP OPTION LOSERS',
-              trailing: TextButton(onPressed: _openOptions, child: const Text('View all')),
-            ),
-          ),
+          const SliverToBoxAdapter(child: SectionHeader('TOP OPTION LOSERS')),
           if (market.topOptionLosers.isEmpty)
             const SliverToBoxAdapter(child: _EmptySection('No option losers right now.'))
           else
             SliverList.builder(
               itemCount: market.topOptionLosers.length,
-              itemBuilder: (c, i) => GainerTile(gainer: market.topOptionLosers[i], onTap: _openOptions),
+              itemBuilder: (c, i) => GainerTile(gainer: market.topOptionLosers[i], onTap: () => _openInstrument(market.topOptionLosers[i])),
             ),
           // ── TRADES (AI signals) ──────────────────────────────
           SliverToBoxAdapter(
@@ -298,39 +274,6 @@ class _DashboardTabState extends State<_DashboardTab> {
               itemCount: _trades.length,
               itemBuilder: (c, i) => _TradeCard(trade: _trades[i]),
             ),
-          // ── STOCKS ───────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: SectionHeader('STOCKS', trailing: TextButton(onPressed: _openStocks, child: const Text('Open'))),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _ModuleBanner(
-                icon: Icons.business,
-                title: 'Stock Analysis',
-                subtitle: '1–3 month opportunities with AI targets & stop-loss',
-                onTap: _openStocks,
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          // ── OPTIONS ──────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: SectionHeader('OPTIONS', trailing: TextButton(onPressed: _openOptions, child: const Text('Open'))),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _ModuleBanner(
-                icon: Icons.show_chart,
-                title: 'Option Opportunities',
-                subtitle: 'Intraday / short-term signals with entry, target & stop-loss',
-                onTap: _openOptions,
-              ),
-            ),
-          ),
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
       ),
@@ -338,12 +281,19 @@ class _DashboardTabState extends State<_DashboardTab> {
   }
 
   void _openTrades() => _openTab(1);
-  void _openStocks() => _openTab(2);
-  void _openOptions() => _openTab(3);
 
   void _openTab(int i) {
     final shell = context.findAncestorStateOfType<_DashboardScreenState>();
     shell?.setState(() => shell._tab = i);
+  }
+
+  /// Open the live detail screen for a stock or option row.
+  void _openInstrument(Gainer g) {
+    if (g.optionType != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => OptionDetailScreen(symbol: g.symbol)));
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => StockDetailScreen(symbol: g.symbol, companyName: g.symbol)));
+    }
   }
 }
 
@@ -434,38 +384,6 @@ class _TradeCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(v.isEmpty ? '—' : v, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
         ],
-      ),
-    );
-  }
-}
-
-class _ModuleBanner extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ModuleBanner({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: theme.colorScheme.primary),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
       ),
     );
   }
