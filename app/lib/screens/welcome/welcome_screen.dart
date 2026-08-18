@@ -21,26 +21,35 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
+  int _routeAttempts = 0;
+
   @override
   void initState() {
     super.initState();
     final session = context.read<SessionProvider>();
     final theme = context.read<ThemeProvider>();
-    Future.wait([session.bootstrap(), theme.init()]).then((_) {
-      Timer(const Duration(milliseconds: 1600), () => _route());
-    });
+    // bootstrap() reads only local storage (no network) and re-validates the
+    // session in the background — it can never stall the splash.
+    unawaited(Future.wait([session.bootstrap(), theme.init()]));
+    // Fixed 2-second splash, then route automatically.
+    Timer(const Duration(seconds: 2), _route);
   }
 
   void _route() {
     if (!mounted) return;
     final session = context.read<SessionProvider>();
-    if (session.state == SessionState.authenticated) {
-      final needsPin = session.user?.securityPinSet == true;
-      if (needsPin) {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const PinUnlockScreen()));
-      } else {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const DashboardScreen()));
-      }
+    if (session.state == SessionState.starting && _routeAttempts < 5) {
+      // Storage hiccup: give bootstrap a short grace period (max ~2s more).
+      _routeAttempts += 1;
+      Timer(const Duration(milliseconds: 400), _route);
+      return;
+    }
+    final loggedIn = session.state == SessionState.authenticated && session.user != null;
+    if (loggedIn) {
+      final needsPin = session.user!.securityPinSet == true;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => needsPin ? const PinUnlockScreen() : const DashboardScreen(),
+      ));
     } else {
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
     }

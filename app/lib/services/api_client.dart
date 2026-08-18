@@ -128,6 +128,26 @@ class ApiClient {
   }
 
   // ── typed helpers ────────────────────────────────────────────
+  /// Open the live market SSE stream. The caller owns the returned
+  /// StreamedResponse (must listen to / cancel its stream).
+  static Future<http.StreamedResponse> openMarketStream() async {
+    final uri = Uri.parse('$_baseUrl/api/market/stream');
+    final req = http.Request('GET', uri);
+    if (_accessToken != null) req.headers['Authorization'] = 'Bearer $_accessToken';
+    try {
+      final res = await http.Client().send(req);
+      if (res.statusCode != 200) {
+        res.stream.drain();
+        throw ApiException('Market stream unavailable (${res.statusCode})', statusCode: res.statusCode);
+      }
+      return res;
+    } on SocketException {
+      throw ApiException('Cannot reach the server. Check your internet / server URL.', statusCode: 0);
+    } on http.ClientException {
+      throw ApiException('Network error while contacting the server.', statusCode: 0);
+    }
+  }
+
   static Future<Map<String, dynamic>> get(String path) => _send('GET', path);
   static Future<Map<String, dynamic>> post(String path, [Object? body]) => _send('POST', path, body: body);
   static Future<Map<String, dynamic>> put(String path, [Object? body]) async {

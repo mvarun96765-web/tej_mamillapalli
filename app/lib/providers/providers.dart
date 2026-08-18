@@ -21,6 +21,9 @@ class SessionProvider extends ChangeNotifier {
   bool unlocked = false; // security PIN / biometric gate passed
   String? error;
 
+  /// Load the cached session WITHOUT waiting on the network, then re-validate
+  /// in the background. The splash screen must never block on a server call
+  /// (cold starts / offline would otherwise stall the app forever).
   Future<void> bootstrap() async {
     await ApiClient.init();
     final savedUser = await _storage.read(key: 'user');
@@ -29,7 +32,30 @@ class SessionProvider extends ChangeNotifier {
         user = User.fromJson(jsonDecode(savedUser) as Map<String, dynamic>);
       } catch (_) {}
     }
-    await _resolve();
+    state = user != null ? SessionState.authenticated : SessionState.unauthenticated;
+    notifyListeners();
+    unawaited(_revalidate());
+  }
+
+  /// Background session check: only a real 401 logs the user out. Network or
+  /// server failures keep the cached session (offline-tolerant startup).
+  Future<void> _revalidate() async {
+    try {
+      user = await AuthApi.me();
+      await _storage.write(key: 'user', value: jsonEncode(user!.toJson()));
+      if (state != SessionState.authenticated) {
+        state = SessionState.authenticated;
+        notifyListeners();
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        await _storage.delete(key: 'user');
+        state = SessionState.unauthenticated;
+        notifyListeners();
+      }
+    } catch (_) {
+      // keep the cached session; offline or server hiccup
+    }
   }
 
   Future<void> _resolve() async {
@@ -111,7 +137,11 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData get dark => AppTheme.dark();
 }
 
-/// Live dashboard data (indices + gainers), auto-refreshed from the backend.
+/// Live dashboard data (indices + gainers).
+///
+/// Primary source: the backend's Server-Sent-Events market stream, which pushes
+/// Angel One SmartStream ticks ~every second. REST polling is only a fallback
+/// (every 30s) so the dashboard keeps working if the stream drops.
 class MarketProvider extends ChangeNotifier {
   Indices? indices;
   List<Gainer> topStocks = [];
@@ -123,16 +153,73 @@ class MarketProvider extends ChangeNotifier {
   DateTime? lastUpdated;
 
   Timer? _timer;
+  StreamSubscription<String>? _streamSub;
+  bool _streamReconnectScheduled = false;
 
   void startPolling() {
     refresh();
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => refresh(silent: true));
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => refresh(silent: true));
+    _connectStream();
   }
 
   void stopPolling() {
     _timer?.cancel();
     _timer = null;
+    _disconnectStream();
+  }
+
+  // ── Live SSE stream (Angel One SmartStream via the backend) ──
+  Future<void> _connectStream() async {
+    if (_streamSub != null) return; // already connected
+    try {
+      final res = await ApiClient.openMarketStream();
+      _streamSub = res.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(_onSseLine, onError: (_) => _onStreamClosed(), onDone: _onStreamClosed);
+    } catch (_) {
+      _onStreamClosed();
+    }
+  }
+
+  void _onSseLine(String line) {
+    final t = line.trim();
+    if (!t.startsWith('data:')) return; // includes SSE keep-alive comments
+    final payload = t.substring(5).trim();
+    if (payload.isEmpty) return;
+    try {
+      _applyLive(jsonDecode(payload) as Map<String, dynamic>);
+    } catch (_) {}
+  }
+
+  void _applyLive(Map<String, dynamic> json) {
+    final idx = json['indices'];
+    if (idx is Map<String, dynamic>) indices = Indices.fromJson(idx);
+    final st = json['topStocks'];
+    if (st is List) topStocks = _gainers(st);
+    final sl = json['topStockLosers'];
+    if (sl is List) topStockLosers = _gainers(sl);
+    lastUpdated = DateTime.now();
+    error = null;
+    notifyListeners();
+  }
+
+  void _onStreamClosed() {
+    _streamSub?.cancel();
+    _streamSub = null;
+    if (_streamReconnectScheduled || _timer == null) return;
+    _streamReconnectScheduled = true;
+    Future.delayed(const Duration(seconds: 8), () {
+      _streamReconnectScheduled = false;
+      if (_timer != null) _connectStream(); // still active
+    });
+  }
+
+  void _disconnectStream() {
+    _streamReconnectScheduled = false;
+    _streamSub?.cancel();
+    _streamSub = null;
   }
 
   Future<void> refresh({bool silent = false}) async {

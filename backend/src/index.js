@@ -23,6 +23,7 @@ app.get('/health', (req, res) => {
     time: new Date().toISOString(),
     scheduler: scheduler.getStatus(),
     angelOne: angleOne.getLoginStatus(),
+    liveStream: angleOne.getStreamStatus(),
   });
 });
 
@@ -45,6 +46,7 @@ db.ready()
     app.listen(config.port, () => {
       console.log(`VARUN TEJ API listening on http://localhost:${config.port}`);
       scheduler.start();
+      angleOne.startStream(); // Angel One WebSocket live quotes (non-blocking, self-retrying)
     });
   })
   .catch((e) => {

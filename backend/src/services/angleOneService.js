@@ -1,4 +1,4 @@
-const { SmartAPI } = require('smartapi-javascript');
+const { SmartAPI, WebSocketV2 } = require('smartapi-javascript');
 const { authenticator } = require('otplib');
 const config = require('../config');
 const db = require('../db');
@@ -38,6 +38,27 @@ let session = null;
 let lastLoginError = '';
 let lastSearchAt = 0;
 let warmupDone = false;
+
+// ── Live SmartStream (Angel One WebSocket) ─────────────────────
+// Index tokens (Angel One's own token space): NIFTY 26000, BANKNIFTY 26009 (NSE),
+// SENSEX 26017 (BSE). Catalog stock tokens are resolved from the `scrips` DB table.
+const INDEX_META = {
+  '26000': { symbol: 'NIFTY', exchange: 'NSE', exchangeType: 1 },
+  '26009': { symbol: 'BANKNIFTY', exchange: 'NSE', exchangeType: 1 },
+  '26017': { symbol: 'SENSEX', exchange: 'BSE', exchangeType: 3 },
+};
+const EXCHANGE_TYPE_NAME = { 1: 'NSE', 2: 'NFO', 3: 'BSE' };
+const LIVE_QUOTE_TTL_MS = 15_000; // a stream quote is considered fresh for 15s
+const BROADCAST_INTERVAL_MS = 1000; // push a snapshot to clients at most 1x/second
+
+const liveQuotes = new Map();    // `${exchangeType}:${token}` -> { ts, value: quote }
+const liveListeners = new Set(); // snapshot broadcast callbacks (SSE clients)
+let liveSnapshot = null;
+let lastBroadcastAt = 0;
+let streamSocket = null;
+let streamStarted = false;
+const tokenBySymbol = new Map(); // catalog symbol -> token (NSE)
+const symbolByToken = new Map(); // catalog token -> symbol (NSE)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -119,8 +140,23 @@ function normalizeQuote(raw) {
     low: num(raw.low),
     close: num(raw.close),
     ltp: num(raw.ltp),
-    netchange: num(raw.netChange !== undefined ? raw.netChange : raw.netchange),
-    percentChange: num(raw.percentChange !== undefined ? raw.percentChange : raw.percentagechange),
+    netchange: (() => {
+      const n = raw.netChange !== undefined ? raw.netChange : raw.netchange;
+      if (n !== undefined && n !== null && Number.isFinite(Number(n))) return num(n);
+      const c = num(raw.close);
+      const l = num(raw.ltp);
+      if (l > 0 && c > 0) return l - c;
+      return 0;
+    })(),
+    percentChange: (() => {
+      const p = raw.percentChange !== undefined ? raw.percentChange : raw.percentagechange;
+      if (p !== undefined && p !== null && Number.isFinite(Number(p))) return num(p);
+      // Angel One's REST feed omits percentagechange; derive it from previous close.
+      const c = num(raw.close);
+      const l = num(raw.ltp);
+      if (c > 0 && l > 0) return ((l - c) / c) * 100;
+      return 0;
+    })(),
     volume: num(raw.tradeVolume !== undefined ? raw.tradeVolume : raw.volume),
     oi: num(raw.opnInterest !== undefined ? raw.opnInterest : raw.openinterest),
     previousClose: num(raw.previousClose),
@@ -211,7 +247,12 @@ async function resolveCatalogTokens() {
   }
   let resolved = 0;
   for (const s of CATALOG_SYMBOLS) {
-    if (await cachedToken(s)) resolved += 1;
+    const t = await cachedToken(s);
+    if (t) {
+      resolved += 1;
+      tokenBySymbol.set(s, t);
+      symbolByToken.set(t, s);
+    }
   }
   console.log(`[angelone] resolved ${resolved}/${CATALOG_SYMBOLS.length} catalog tokens`);
 }
@@ -277,9 +318,215 @@ async function getOptionChain(force = false) {
   return optionChainCache.list;
 }
 
+// ── Live SmartStream (Angel One WebSocket) ─────────────────────
+
+function streamNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Normalize a SmartStream tick (mode 2 QUOTE) into the app's quote shape. */
+function normalizeStreamTick(tick) {
+  const exchangeType = streamNum(tick.exchange_type);
+  const token = String(tick.token || '').replace(/"/g, '').trim();
+  if (!token) return null;
+  const scale = 100; // SmartStream sends all prices multiplied by 100
+  const ltp = streamNum(tick.last_traded_price) / scale;
+  const close = streamNum(tick.close_price) / scale;
+  const open = streamNum(tick.open_price_day) / scale;
+  const high = streamNum(tick.high_price_day) / scale;
+  const low = streamNum(tick.low_price_day) / scale;
+  const netchange = ltp > 0 && close > 0 ? ltp - close : 0;
+  const percentChange = close > 0 ? (netchange / close) * 100 : 0;
+
+  let symbol = '';
+  let exchange = EXCHANGE_TYPE_NAME[exchangeType] || '';
+  const meta = INDEX_META[token];
+  if (meta) {
+    symbol = meta.symbol;
+    exchange = meta.exchange;
+  } else if (symbolByToken.has(token)) {
+    symbol = symbolByToken.get(token);
+  }
+  const ts = streamNum(tick.exchange_timestamp);
+  return {
+    symbol,
+    token,
+    exchange,
+    open,
+    high,
+    low,
+    close,
+    ltp,
+    netchange,
+    percentChange,
+    volume: streamNum(tick.vol_traded),
+    oi: 0,
+    lastTradedTime: ts > 0 ? new Date(ts).toISOString() : '',
+  };
+}
+
+/** Live quote for an index token, or null if the stream hasn't delivered one. */
+function liveIndexQuote(token) {
+  const meta = INDEX_META[token];
+  const hit = liveQuotes.get(`${meta.exchangeType}:${token}`);
+  if (hit && Date.now() - hit.ts < LIVE_QUOTE_TTL_MS && hit.value.ltp > 0) return hit.value;
+  return null;
+}
+
+/** Top N live gainers/losers from the streamed catalog quotes. */
+function topLiveRows(exchangeType, gainers, limit) {
+  const now = Date.now();
+  const rows = [];
+  for (const [token, symbol] of symbolByToken) {
+    const q = liveQuotes.get(`${exchangeType}:${token}`);
+    if (!q || now - q.ts > LIVE_QUOTE_TTL_MS || q.value.ltp <= 0) continue;
+    rows.push({
+      symbol: q.value.symbol || symbol,
+      token,
+      ltp: q.value.ltp,
+      netchange: q.value.netchange,
+      percentChange: q.value.percentChange,
+      exchange: 'NSE',
+    });
+  }
+  rows.sort((a, b) => (gainers ? b.percentChange - a.percentChange : a.percentChange - b.percentChange));
+  return rows.filter((r) => (gainers ? r.percentChange > 0 : r.percentChange < 0)).slice(0, limit);
+}
+
+/** Dashboard-shaped snapshot built purely from stream data (same shape as /dashboard). */
+function computeLiveSnapshot() {
+  const nifty = liveIndexQuote('26000');
+  const banknifty = liveIndexQuote('26009');
+  return {
+    stream: true,
+    ts: Date.now(),
+    indices: {
+      nifty: nifty || { error: 'NIFTY quote unavailable' },
+      sensex: liveIndexQuote('26017') || { error: 'SENSEX is not available on this SmartAPI account (BSE index feed). BANKNIFTY is shown as the second live index.' },
+      banknifty: banknifty || { error: 'BANKNIFTY quote unavailable' },
+    },
+    topStocks: topLiveRows(1, true, 10),
+    topStockLosers: topLiveRows(1, false, 10),
+  };
+}
+
+function handleStreamTick(tick) {
+  const q = normalizeStreamTick(tick);
+  if (!q) return;
+  const exchangeType = streamNum(tick.exchange_type);
+  liveQuotes.set(`${exchangeType}:${q.token}`, { ts: Date.now(), value: q });
+  // Coalesce rapid ticks (many symbols stream 1x/sec) into one 1-second push.
+  const now = Date.now();
+  if (now - lastBroadcastAt >= BROADCAST_INTERVAL_MS) {
+    lastBroadcastAt = now;
+    liveSnapshot = computeLiveSnapshot();
+    for (const cb of liveListeners) {
+      try { cb(liveSnapshot); } catch (_) {}
+    }
+  }
+}
+
+/** Subscribe the open socket to the NSE catalog tokens (in chunks of 100). */
+function subscribeCatalog(ws) {
+  const tokens = [...tokenBySymbol.values()].filter((t) => t);
+  for (let i = 0; i < tokens.length; i += 100) {
+    ws.fetchData({ correlationID: 'stk', action: 1, mode: 2, exchangeType: 1, tokens: tokens.slice(i, i + 100) });
+  }
+}
+
+/** Open (or re-open after session refresh) the live socket and subscribe. */
+async function openStreamSocket(handle) {
+  if (handle.stopped) return;
+  await ensureSession();
+  const ws = new WebSocketV2({
+    jwttoken: session.jwt,
+    apikey: config.angelone.apiKey,
+    clientcode: config.angelone.clientCode,
+    feedtype: session.feedToken,
+  });
+  streamSocket = ws;
+  ws.reconnection('simple', 3000); // library auto-reconnects + re-subscribes
+  ws.on('tick', handleStreamTick);
+  await ws.connect();
+  ws.fetchData({ correlationID: 'idx', action: 1, mode: 2, exchangeType: 1, tokens: ['26000', '26009'] });
+  ws.fetchData({ correlationID: 'bse', action: 1, mode: 2, exchangeType: 3, tokens: ['26017'] });
+  subscribeCatalog(ws);
+  console.log('[angelone-stream] live stream connected');
+
+  // Re-login and rebuild the socket well before the 24h session expires.
+  const refreshTimer = setTimeout(async () => {
+    try {
+      ws.close();
+      await ensureSession(true);
+      await openStreamSocket(handle);
+    } catch (e) {
+      console.warn('[angelone-stream] session refresh failed:', e.message);
+    }
+  }, 8 * 60 * 60 * 1000);
+  if (refreshTimer.unref) refreshTimer.unref();
+}
+
+/** Load the resolved catalog tokens from the DB into memory (fast, no network). */
+async function loadCatalogTokens() {
+  try {
+    const rows = await db.prepare('SELECT symbol, token FROM scrips WHERE exchange = ?').all('NSE');
+    for (const r of rows) {
+      tokenBySymbol.set(r.symbol, String(r.token));
+      symbolByToken.set(String(r.token), r.symbol);
+    }
+  } catch (e) {
+    console.warn('[angelone-stream] loadCatalogTokens:', e.message);
+  }
+}
+
+/** Boot the live stream in the background; retries until Angel One accepts. */
+function startStream() {
+  if (streamStarted) return;
+  streamStarted = true;
+  const handle = { stopped: false };
+  (async () => {
+    while (!handle.stopped) {
+      try {
+        await loadCatalogTokens();
+        await openStreamSocket(handle);
+        return;
+      } catch (e) {
+        console.warn('[angelone-stream] connect failed, retry in 10s:', e.message);
+        await sleep(10_000);
+      }
+    }
+  })();
+  return handle;
+}
+
+function getLiveSnapshot() {
+  return liveSnapshot;
+}
+
+function getStreamStatus() {
+  return { connected: !!streamSocket, tokens: liveQuotes.size };
+}
+
+/** Register a callback that receives each 1-second live snapshot. */
+function onLiveTick(cb) {
+  liveListeners.add(cb);
+}
+
 // ── Public API ─────────────────────────────────────────────────
 
 async function getIndices() {
+  const nifty = liveIndexQuote('26000');
+  const banknifty = liveIndexQuote('26009');
+  if (nifty && banknifty) {
+    // Prefer the WebSocket stream (freshest, no REST cost).
+    return {
+      nifty,
+      sensex: liveIndexQuote('26017') || { error: 'SENSEX is not available on this SmartAPI account (BSE index feed). BANKNIFTY is shown as the second live index.' },
+      banknifty,
+    };
+  }
+  // Stream not delivering yet -> REST fallback.
   const quotes = await getQuotesCached({ NSE: ['26000', '26009'], BSE: ['26017'] });
   const byToken = new Map(quotes.map((q) => [q.token, q]));
   return {
@@ -290,6 +537,8 @@ async function getIndices() {
 }
 
 async function getTopStockGainers(limit = 10) {
+  const live = topLiveRows(1, true, limit);
+  if (live.length) return live;
   if (!warmupDone) startWarmup();
   await resolveCatalogTokens();
 
@@ -470,6 +719,8 @@ async function getInstrumentDetails({ symbol, kind = 'stock' } = {}) {
 }
 
 async function getTopStockLosers(limit = 10) {
+  const live = topLiveRows(1, false, limit);
+  if (live.length) return live;
   if (!warmupDone) startWarmup();
   await resolveCatalogTokens();
 
@@ -526,6 +777,10 @@ module.exports = {
   getTopOptionLosers,
   searchInstruments,
   getLoginStatus,
+  getStreamStatus,
+  getLiveSnapshot,
+  onLiveTick,
+  startStream,
   startWarmup,
   resolveToken,
   resolveInstrument,

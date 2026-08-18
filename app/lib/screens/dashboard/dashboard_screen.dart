@@ -9,6 +9,7 @@ import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../services/api_services.dart';
 import '../../widgets/common.dart';
+import '../auth/auth_screen.dart';
 import '../notifications/inbox_screen.dart';
 import '../options/options_screen.dart';
 import '../profile/profile_screen.dart';
@@ -26,6 +27,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
+  bool _bounced = false;
 
   @override
   void initState() {
@@ -45,6 +47,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<SessionProvider>();
+    // Background session re-validation found the token dead (401) -> back to auth.
+    if (session.state == SessionState.unauthenticated && !_bounced) {
+      _bounced = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthScreen()),
+          (route) => false,
+        );
+      });
+    }
     return Scaffold(
       body: IndexedStack(
         index: _tab,

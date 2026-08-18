@@ -5,6 +5,42 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+// ── Live stream (SSE) ──────────────────────────────────────────
+// Pushes the 1-second Angel One SmartStream snapshot to connected apps.
+const sseClients = new Set();
+
+function sseSend(res, payload) {
+  try {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  } catch (_) {}
+}
+
+function broadcast(payload) {
+  for (const res of sseClients) sseSend(res, payload);
+}
+
+angleOne.onLiveTick(broadcast);
+
+router.get('/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const snap = angleOne.getLiveSnapshot();
+  if (snap) sseSend(res, snap);
+  sseClients.add(res);
+
+  const keepAlive = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) {}
+  }, 15_000);
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    sseClients.delete(res);
+  });
+});
+
 async function wrap(fn, res) {
   try {
     const data = await fn();
@@ -36,24 +72,35 @@ router.get('/losers/options', (req, res) => {
   wrap(() => angleOne.getTopOptionLosers(limit), res);
 });
 
-/** Combined payload the Dashboard loads in one call. */
+/**
+ * Combined payload the Dashboard loads in one call. Indices and stock movers
+ * come from the live WebSocket snapshot (instant); option movers need the
+ * rate-limited option-chain search, so they're bounded by a short timeout and
+ * degrade gracefully to `{ error }` instead of hanging the dashboard.
+ */
+const settle = (p, ms = 7000) => Promise.race([
+  p.then((value) => ({ ok: true, value }), (e) => ({ ok: false, error: e.message })),
+  new Promise((r) => setTimeout(() => r({ ok: false, error: 'Timed out' }), ms)),
+]);
+
 router.get('/dashboard', async (req, res) => {
   try {
-    const [indices, stockGainers, optionGainers, stockLosers, optionLosers] = await Promise.allSettled([
-      angleOne.getIndices(),
-      angleOne.getTopStockGainers(10),
-      angleOne.getTopOptionGainers(10),
-      angleOne.getTopStockLosers(10),
-      angleOne.getTopOptionLosers(10),
+    const [indices, stockGainers, optionGainers, stockLosers, optionLosers] = await Promise.all([
+      settle(angleOne.getIndices()),
+      settle(angleOne.getTopStockGainers(10)),
+      settle(angleOne.getTopOptionGainers(10)),
+      settle(angleOne.getTopStockLosers(10)),
+      settle(angleOne.getTopOptionLosers(10)),
     ]);
+    const pick = (r) => (r.ok ? r.value : { error: r.error });
     res.json({
       ok: true,
       data: {
-        indices: indices.status === 'fulfilled' ? indices.value : { error: indices.reason.message },
-        topStocks: stockGainers.status === 'fulfilled' ? stockGainers.value : { error: stockGainers.reason.message },
-        topOptions: optionGainers.status === 'fulfilled' ? optionGainers.value : { error: optionGainers.reason.message },
-        topStockLosers: stockLosers.status === 'fulfilled' ? stockLosers.value : { error: stockLosers.reason.message },
-        topOptionLosers: optionLosers.status === 'fulfilled' ? optionLosers.value : { error: optionLosers.reason.message },
+        indices: pick(indices),
+        topStocks: pick(stockGainers),
+        topOptions: pick(optionGainers),
+        topStockLosers: pick(stockLosers),
+        topOptionLosers: pick(optionLosers),
       },
     });
   } catch (e) {

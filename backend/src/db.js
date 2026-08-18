@@ -40,7 +40,10 @@ const coll = (name) => db.collection(name);
 const TABLES = {
   users: {
     hasId: true,
-    unique: [['email'], ['phone'], ['username']],
+    // NOTE: `phone` is intentionally NOT unique — signup never sets it, so a
+    // unique index would store phone:null for every user and block the second
+    // signup ever (E11000). The old SQLite unique index allowed multiple NULLs.
+    unique: [['email'], ['username']],
     timestamps: ['created_at', 'updated_at'],
     defaults: { name: '', dob: '', email_verified: 0, phone_verified: 0, profile_pic: '', security_pin_hash: '', biometric_enabled: 0 },
   },
@@ -572,6 +575,12 @@ async function initSchema() {
     }
   }
   await coll('counters').createIndex({ _id: 1 }, { name: 'u__id' });
+  // One-time self-heal: older schema versions created a unique index on
+  // users.phone, which made every user (phone = null) collide. Drop it so
+  // signup works for more than one account. Missing index -> no-op.
+  try {
+    await coll('users').dropIndex('u_phone');
+  } catch (_) {}
 }
 
 let schemaReady = null;
