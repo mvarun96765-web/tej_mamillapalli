@@ -88,9 +88,9 @@ router.get('/dashboard', async (req, res) => {
     const [indices, stockGainers, optionGainers, stockLosers, optionLosers] = await Promise.all([
       settle(angleOne.getIndices()),
       settle(angleOne.getTopStockGainers(10)),
-      settle(angleOne.getTopOptionGainers(10)),
+      settle(angleOne.getTopOptionGainers(10), 9000),
       settle(angleOne.getTopStockLosers(10)),
-      settle(angleOne.getTopOptionLosers(10)),
+      settle(angleOne.getTopOptionLosers(10), 9000),
     ]);
     const pick = (r) => (r.ok ? r.value : { error: r.error });
     res.json({

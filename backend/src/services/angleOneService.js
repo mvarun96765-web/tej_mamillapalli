@@ -67,10 +67,9 @@ function currentTotp() {
   return authenticator.generate(config.angelone.totpSecret);
 }
 
-/** Ensure we have a live Angel One session (login once, auto-reissue on expiry). */
-async function ensureSession(force = false) {
-  if (smartApi && session && !force && Date.now() < session.expiresAt - 60_000) return smartApi;
+let loginPromise = null;
 
+async function doLogin() {
   const { apiKey, clientCode, pin, totpSecret } = config.angelone;
   if (!apiKey || !clientCode || !pin || !totpSecret) {
     const err = new Error('Angel One credentials are not configured in backend/.env');
@@ -102,6 +101,17 @@ async function ensureSession(force = false) {
   lastLoginError = '';
   console.log('[angelone] session established');
   return client;
+}
+
+/**
+ * Ensure we have a live Angel One session. Concurrent logins are deduped: the
+ * chain build, the live stream and market-data requests all start at boot and
+ * Angel One rejects simultaneous generateSession calls for the same client code.
+ */
+async function ensureSession(force = false) {
+  if (smartApi && session && !force && Date.now() < session.expiresAt - 60_000) return smartApi;
+  if (!loginPromise) loginPromise = doLogin().finally(() => { loginPromise = null; });
+  return loginPromise;
 }
 
 /** searchScrip respecting the broker's rate limit (sequential, spaced, retry once). */
@@ -275,46 +285,149 @@ async function resolveToken(symbol) {
   return null;
 }
 
-/** Background warm-up: resolve catalog so the first dashboard load is fast. */
+/** Background warm-up: resolve catalog + option chain so the first load is fast. */
 function startWarmup() {
   if (warmupDone) return;
   warmupDone = true;
   setTimeout(() => {
-    ensureSession().then(() => resolveCatalogTokens()).catch((e) => console.warn('[angelone] warmup:', e.message));
+    ensureSession()
+      .then(() => Promise.all([resolveCatalogTokens(), refreshOptionChain()]))
+      .catch((e) => console.warn('[angelone] warmup:', e.message));
   }, 2000);
 }
 
-// ── Option chain (data-driven from searchScrip NFO) ────────────
-function parseOptionRows(rows, underlying) {
+// ── Option chain (whole options market: indices + liquid stock underlyings) ──
+// Index underlyings are searched on NFO (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY)
+// and BFO (SENSEX); stock underlyings are searched on NFO. Each search returns
+// every contract across expiries; we keep the active expiry per underlying and
+// spread-sample its strike ladder, so top option gainers/losers cover the entire
+// options market instead of just NIFTY.
+const OPTION_INDICES = [
+  { symbol: 'NIFTY', exchange: 'NFO' },
+  { symbol: 'BANKNIFTY', exchange: 'NFO' },
+  { symbol: 'FINNIFTY', exchange: 'NFO' },
+  { symbol: 'MIDCPNIFTY', exchange: 'NFO' },
+  { symbol: 'SENSEX', exchange: 'BFO' },
+];
+
+const OPTION_STOCKS = [
+  'RELIANCE', 'HDFCBANK', 'ICICIBANK', 'INFY', 'TCS', 'SBIN', 'AXISBANK',
+  'KOTAKBANK', 'LT', 'ITC', 'BHARTIARTL', 'HINDUNILVR', 'BAJFINANCE',
+  'TATAMOTORS', 'TATASTEEL', 'MARUTI', 'SUNPHARMA', 'TITAN', 'WIPRO',
+  'HCLTECH', 'ASIANPAINT', 'ULTRACEMCO', 'ADANIENT', 'ADANIPORTS',
+];
+
+const OPTION_UNDERLYINGS = [
+  ...OPTION_INDICES,
+  ...OPTION_STOCKS.map((symbol) => ({ symbol, exchange: 'NFO' })),
+];
+
+/** Underlying names longest-first, so regex alternation matches FINNIFTY before NIFTY. */
+const UNDERLYING_RE = [...OPTION_UNDERLYINGS.map((u) => u.symbol)].sort((a, b) => b.length - a.length).join('|');
+
+function parseOptionRows(rows, underlying, exchange) {
   const parsed = [];
   for (const r of rows) {
     const sym = String(r.tradingsymbol || r.symbol || '').toUpperCase();
-    // <UNDERLYING><DDMMMYY><STRIKE><CE|PE>  e.g. NIFTY29SEP2624600PE
-    const m = sym.match(new RegExp(`^${underlying}(\\d{2}[A-Z]{3}\\d{2})(\\d+)(CE|PE)$`));
+    // NFO: <UNDERLYING><DDMMMYY><STRIKE><CE|PE>  e.g. RELIANCE25AUG261000CE
+    // BFO: <UNDERLYING><6-digit expiry code><STRIKE><CE|PE>  e.g. SENSEX2682069100CE
+    const re = exchange === 'BFO'
+      ? new RegExp(`^${underlying}(\\d{6})(\\d+)(CE|PE)$`)
+      : new RegExp(`^${underlying}(\\d{2}[A-Z]{3}\\d{2})(\\d+)(CE|PE)$`);
+    const m = sym.match(re);
     if (!m || !r.symboltoken) continue;
-    parsed.push({ symbol: sym, expiry: m[1], strike: parseInt(m[2], 10), optionType: m[3], token: String(r.symboltoken) });
+    parsed.push({
+      symbol: sym,
+      underlying,
+      expiry: m[1],
+      strike: parseInt(m[2], 10),
+      optionType: m[3],
+      token: String(r.symboltoken),
+      exchange,
+    });
   }
   return parsed;
 }
 
+/** Active expiry for a set of contracts = the one with the most strikes. */
+function activeExpiryFor(contracts) {
+  const counts = new Map();
+  for (const c of contracts) counts.set(c.expiry, (counts.get(c.expiry) || 0) + 1);
+  let best = '';
+  let bestN = -1;
+  for (const [e, n] of counts) {
+    if (n > bestN) { best = e; bestN = n; }
+  }
+  return best;
+}
+
+/**
+ * Pick a bounded sample of contracts across the whole market: for each
+ * underlying, the active expiry, with strikes spread evenly over the ladder
+ * (so movers anywhere in the chain are captured, not just near-the-money).
+ */
+function selectOptionPicks(chain, perUnderlying = 16) {
+  const byUnderlying = new Map();
+  for (const c of chain) {
+    if (!byUnderlying.has(c.underlying)) byUnderlying.set(c.underlying, []);
+    byUnderlying.get(c.underlying).push(c);
+  }
+  const picks = [];
+  for (const contracts of byUnderlying.values()) {
+    const active = activeExpiryFor(contracts);
+    const activeContracts = active ? contracts.filter((c) => c.expiry === active) : contracts;
+    const strikes = [...new Set(activeContracts.map((c) => c.strike))].sort((a, b) => a - b);
+    const targetStrikes = Math.max(4, Math.floor(perUnderlying / 4)); // ~4 strikes x CE/PE
+    const step = Math.max(1, Math.floor(strikes.length / targetStrikes));
+    const chosen = new Set(strikes.filter((_, i) => i % step === 0));
+    for (const c of activeContracts) {
+      if (chosen.has(c.strike)) picks.push(c);
+    }
+  }
+  return picks;
+}
+
+let chainBuildPromise = null;
+
+/** Full scan of every underlying (rate-limited, so it runs in the background). */
+async function buildOptionChain() {
+  const t0 = Date.now();
+  const parsed = [];
+  for (const u of OPTION_UNDERLYINGS) {
+    try {
+      const rows = await searchScrip(u.exchange, u.symbol);
+      const contracts = parseOptionRows(rows, u.symbol, u.exchange);
+      parsed.push(...contracts);
+      console.log(`[angelone] chain ${u.symbol} (${u.exchange}): ${contracts.length} contracts`);
+    } catch (e) {
+      console.warn(`[angelone] chain search ${u.symbol} failed:`, e.message);
+    }
+  }
+  optionChainCache = { ts: Date.now(), list: parsed };
+  console.log(`[angelone] option chain: ${parsed.length} contracts across ${OPTION_UNDERLYINGS.length} underlyings (${Date.now() - t0}ms)`);
+  return parsed;
+}
+
+/** Kick off a background chain build (deduped); never blocks callers. */
+function refreshOptionChain() {
+  if (chainBuildPromise) return chainBuildPromise;
+  chainBuildPromise = buildOptionChain().finally(() => { chainBuildPromise = null; });
+  chainBuildPromise.catch(() => {});
+  return chainBuildPromise;
+}
+
+/**
+ * Return the cached chain immediately (serving stale data while a refresh runs).
+ * `force` awaits a full rebuild — only used for rare lookups of uncached contracts.
+ */
 async function getOptionChain(force = false) {
-  if (!force && optionChainCache.list.length && Date.now() - optionChainCache.ts < OPTION_CHAIN_TTL_MS) {
+  if (force) return refreshOptionChain();
+  const stale = Date.now() - optionChainCache.ts >= OPTION_CHAIN_TTL_MS;
+  if (!optionChainCache.list.length) {
+    refreshOptionChain(); // first load: build in the background
     return optionChainCache.list;
   }
-  // Full scan of both index derivatives; the search API caps results, so we cache
-  // everything we get across expiries and match contracts by expiry + strike + type.
-  const niftyRows = await searchScrip('NFO', 'NIFTY');
-  const bankRows = await searchScrip('NFO', 'BANKNIFTY');
-  const parsed = [...parseOptionRows(niftyRows, 'NIFTY'), ...parseOptionRows(bankRows, 'BANKNIFTY')];
-  const byExpiry = new Map();
-  for (const p of parsed) {
-    if (!byExpiry.has(p.expiry)) byExpiry.set(p.expiry, []);
-    byExpiry.get(p.expiry).push(p);
-  }
-  // Active expiry = the one with the most strikes (near/current series).
-  const active = [...byExpiry.entries()].sort((a, b) => b[1].length - a[1].length)[0];
-  optionChainCache = { ts: Date.now(), list: parsed, byExpiry, activeExpiry: active ? active[0] : '' };
-  console.log(`[angelone] option chain: ${parsed.length} symbols (active ${optionChainCache.activeExpiry})`);
+  if (stale) refreshOptionChain();
   return optionChainCache.list;
 }
 
@@ -489,6 +602,7 @@ function startStream() {
     while (!handle.stopped) {
       try {
         await loadCatalogTokens();
+        refreshOptionChain(); // warm the whole-market option chain in the background
         await openStreamSocket(handle);
         return;
       } catch (e) {
@@ -555,61 +669,72 @@ async function getTopStockGainers(limit = 10) {
     .slice(0, limit);
 }
 
-async function getTopOptionGainers(limit = 10) {
-  const indices = await getIndices();
-  const spot = indices.nifty && indices.nifty.ltp;
-  if (!spot) throw new Error('NIFTY spot unavailable for option chain');
-
+/** Top option movers selected from the ENTIRE options market (not just NIFTY). */
+async function getOptionMovers(limit = 10, gainers = true) {
   const chain = await getOptionChain();
-  const active = optionChainCache.activeExpiry;
-  // ATM band: strikes within +-1.5% of spot in the active expiry (liquid, meaningful moves).
-  const band = chain.filter((p) => (!active || p.expiry === active) && p.strike >= spot * 0.985 && p.strike <= spot * 1.015);
-  if (!band.length) return [];
+  if (!chain.length) return [];
+  const picks = selectOptionPicks(chain);
+  if (!picks.length) return [];
 
-  // Prefer the ATM region (closest 20 strikes each side) to limit request size.
-  const sorted = band.sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot));
-  const picks = sorted.slice(0, 24);
-
-  const quotes = await getQuotesCached({ NFO: picks.map((p) => p.token) });
-  const byToken = new Map(picks.map((p) => [p.token, p]));
+  const tokens = { NFO: [], BFO: [] };
+  for (const p of picks) tokens[p.exchange].push(p.token);
+  const quotes = await getQuotesCached(tokens);
+  const byToken = new Map();
+  for (const p of picks) byToken.set(p.token, p);
 
   const rows = [];
   for (const q of quotes) {
     const meta = byToken.get(q.token);
-    if (!meta || q.ltp <= 0) continue;
+    // ltp >= 1 filters near-zero dust contracts whose % move is just noise.
+    if (!meta || q.ltp < 1) continue;
     rows.push({
-      symbol: q.symbol,
+      symbol: `${meta.underlying} ${meta.strike} ${meta.optionType}`, // display name
+      instrument: q.symbol, // raw trading symbol (e.g. BHARTIARTL25AUG261940PE)
       token: q.token,
+      underlying: meta.underlying,
       strike: String(meta.strike),
-      expiry: active || meta.expiry,
+      expiry: meta.expiry,
       optionType: meta.optionType,
-      ltp: q.ltp, netchange: q.netchange, percentChange: q.percentChange,
-      oi: q.oi, volume: q.volume, exchange: 'NFO',
+      ltp: q.ltp,
+      netchange: q.netchange,
+      percentChange: q.percentChange,
+      oi: q.oi,
+      volume: q.volume,
+      exchange: meta.exchange,
     });
   }
 
   return rows
-    .filter((r) => r.percentChange > 0)
-    .sort((a, b) => b.percentChange - a.percentChange)
+    .filter((r) => (gainers ? r.percentChange > 0 : r.percentChange < 0))
+    .sort((a, b) => (gainers ? b.percentChange - a.percentChange : a.percentChange - b.percentChange))
     .slice(0, limit);
+}
+
+async function getTopOptionGainers(limit = 10) {
+  return getOptionMovers(limit, true);
 }
 
 async function searchInstruments(query) {
   const q = String(query || '').trim().toUpperCase();
   if (!q) return [];
 
-  if (/^(NIFTY|NIFTY50|BANKNIFTY|SENSEX)$/.test(q)) {
+  if (/^(NIFTY|NIFTY50|BANKNIFTY|SENSEX|FINNIFTY|MIDCPNIFTY)$/.test(q)) {
     const idx = q.startsWith('BANKNIFTY') ? { symbol: 'BANKNIFTY', token: '26009', exchange: 'NSE' }
       : q === 'SENSEX' ? { symbol: 'SENSEX', token: '26017', exchange: 'BSE' }
+      : q === 'FINNIFTY' ? { symbol: 'FINNIFTY', token: '', exchange: 'NSE' }
+      : q === 'MIDCPNIFTY' ? { symbol: 'MIDCPNIFTY', token: '', exchange: 'NSE' }
       : { symbol: 'NIFTY 50', token: '26000', exchange: 'NSE' };
     return [{ type: 'index', ...idx }];
   }
 
-  const optionRe = /^(NIFTY|BANKNIFTY)\s+(\d+)\s+(CE|PE)$/i;
+  const optionRe = new RegExp(`^(${UNDERLYING_RE})\\s+(\\d+)\\s+(CE|PE)$`, 'i');
   const m = q.match(optionRe);
-  const optionMatches = m
-    ? [{ type: 'option', symbol: `${m[1]} ${m[2]} ${m[3].toUpperCase()}`, token: '', exchange: 'NFO' }]
-    : [];
+  let optionMatches = [];
+  if (m) {
+    const u = m[1].toUpperCase();
+    const meta = OPTION_UNDERLYINGS.find((x) => x.symbol === u);
+    optionMatches = [{ type: 'option', symbol: `${u} ${m[2]} ${m[3].toUpperCase()}`, token: '', exchange: (meta && meta.exchange) || 'NFO' }];
+  }
 
   await resolveCatalogTokens();
   const stockMatches = CATALOG_SYMBOLS
@@ -627,14 +752,15 @@ function getLoginStatus() {
 /** Resolve an instrument (stock or option) to { exchange, token, symbol }. */
 async function resolveInstrument(symbol, kind) {
   if (kind === 'option') {
-    const pretty = String(symbol || '').match(/^(NIFTY|BANKNIFTY)\s+(\d+)\s+(CE|PE)$/i);
-    const raw = String(symbol || '').match(/^(NIFTY|BANKNIFTY)(\d{2}[A-Z]{3}\d{2})(\d+)(CE|PE)$/i);
-    let strike; let optType; let expiry = null; let underlying = 'NIFTY';
+    const s = String(symbol || '').trim();
+    const pretty = s.match(new RegExp(`^(${UNDERLYING_RE})\\s+(\\d+)\\s+(CE|PE)$`, 'i'));
+    const raw = s.match(new RegExp(`^(${UNDERLYING_RE})(\\d{2}[A-Z]{3}\\d{2}|\\d{6})(\\d+)(CE|PE)$`, 'i'));
+    let strike; let optType; let expiry = null; let underlying = '';
     if (pretty) { underlying = pretty[1].toUpperCase(); strike = parseInt(pretty[2], 10); optType = pretty[3].toUpperCase(); }
     else if (raw) { underlying = raw[1].toUpperCase(); expiry = raw[2]; strike = parseInt(raw[3], 10); optType = raw[4].toUpperCase(); }
     else return null;
     const match = (chain) => chain.find((p) =>
-      p.strike === strike && p.optionType === optType && p.symbol.startsWith(underlying) && (!expiry || p.expiry === expiry));
+      p.strike === strike && p.optionType === optType && p.underlying === underlying && (!expiry || p.expiry === expiry));
     let chain = await getOptionChain();
     let hit = match(chain);
     if (!hit) {
@@ -643,7 +769,7 @@ async function resolveInstrument(symbol, kind) {
       hit = match(chain);
     }
     if (!hit) return null;
-    return { exchange: 'NFO', token: hit.token, symbol: hit.symbol };
+    return { exchange: hit.exchange, token: hit.token, symbol: hit.symbol };
   }
   const token = await resolveToken(String(symbol || '').toUpperCase());
   return token ? { exchange: 'NSE', token, symbol: String(symbol).toUpperCase() } : null;
@@ -738,34 +864,7 @@ async function getTopStockLosers(limit = 10) {
 }
 
 async function getTopOptionLosers(limit = 10) {
-  const indices = await getIndices();
-  const spot = indices.nifty && indices.nifty.ltp;
-  if (!spot) throw new Error('NIFTY spot unavailable for option chain');
-
-  const chain = await getOptionChain();
-  const active = optionChainCache.activeExpiry;
-  const band = chain.filter((p) => (!active || p.expiry === active) && p.strike >= spot * 0.985 && p.strike <= spot * 1.015);
-  if (!band.length) return [];
-  const sorted = band.sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot));
-  const picks = sorted.slice(0, 24);
-  const quotes = await getQuotesCached({ NFO: picks.map((p) => p.token) });
-  const byToken = new Map(picks.map((p) => [p.token, p]));
-
-  const rows = [];
-  for (const q of quotes) {
-    const meta = byToken.get(q.token);
-    if (!meta || q.ltp <= 0) continue;
-    rows.push({
-      symbol: q.symbol, token: q.token, strike: String(meta.strike),
-      expiry: active || meta.expiry, optionType: meta.optionType,
-      ltp: q.ltp, netchange: q.netchange, percentChange: q.percentChange,
-      oi: q.oi, volume: q.volume, exchange: 'NFO',
-    });
-  }
-  return rows
-    .filter((r) => r.percentChange < 0)
-    .sort((a, b) => a.percentChange - b.percentChange)
-    .slice(0, limit);
+  return getOptionMovers(limit, false);
 }
 
 module.exports = {
